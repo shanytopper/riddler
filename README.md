@@ -39,7 +39,7 @@ npm run format
 
 ## Status
 
-Prototype, steps 1–7 of the order of work in [docs/design.md §12.1](docs/design.md) are done and verified on the emulator: the bundle format and validator, the app shell, the offline-map spike, the station flow (game-core + bundle builder + the play screens), crash-safe local state (`expo-sqlite`), and the delivery + ingestion API with sync and the leaderboard (`apps/api`, see its README). An offline playthrough syncs on reconnect and appears on the leaderboard with the server-computed score. Hosting is decided (D27: Render on free tiers, no domain until the go/no-go): the hosted Postgres exists and is seeded; the web service deploys from a GitHub repository via `render.yaml` / `apps/api/scripts/render-deploy.mjs` once the code is pushed. Then the field test (step 8).
+Prototype, steps 1–7 of the order of work in [docs/design.md §12.1](docs/design.md) are done and verified on the emulator: the bundle format and validator, the app shell, the offline-map spike, the station flow (game-core + bundle builder + the play screens), crash-safe local state (`expo-sqlite`), and the delivery + ingestion API with sync and the leaderboard (`apps/api`, see its README). An offline playthrough syncs on reconnect and appears on the leaderboard with the server-computed score. The API is hosted on Render free tiers (D27, no domain until the go/no-go) at `https://riddles-api-vv2y.onrender.com`, built from this repository (`render.yaml`, `apps/api/scripts/render-deploy.mjs`); the hosted Postgres is seeded with Ein Dror. Next: the field test (step 8).
 
 ```bash
 npm run web -w @riddles/mobile     # the app in a browser
