@@ -1,16 +1,14 @@
 import Constants from "expo-constants";
 import { Redirect, router } from "expo-router";
 import { useEffect, useState } from "react";
-import { Pressable, TextInput, View } from "react-native";
+import { Pressable, View } from "react-native";
 import { Button } from "../src/components/Button.tsx";
-import { Card } from "../src/components/Card.tsx";
 import { Screen, Stack } from "../src/components/Screen.tsx";
 import { ThemedText } from "../src/components/ThemedText.tsx";
+import { TrackCard } from "../src/components/TrackCard.tsx";
 import { delivery } from "../src/delivery/client.ts";
-import { normalizeVenueCode } from "../src/delivery/links.ts";
-import type { VenueSummary } from "../src/delivery/types.ts";
+import type { TrackSummary } from "../src/delivery/types.ts";
 import { useLanguage } from "../src/i18n/LanguageProvider.tsx";
-import { useRecentVenues } from "../src/state/RecentVenues.tsx";
 import { useTheme } from "../src/theme/index.ts";
 
 const configured: unknown = Constants.expoConfig?.extra?.pinnedTenant;
@@ -22,33 +20,32 @@ export default function UmbrellaHome() {
   return <UmbrellaHomeContent />;
 }
 
+type TrackList =
+  { status: "loading" } | { status: "error" } | { status: "ready"; tracks: TrackSummary[] };
+
+/**
+ * Prototype only (owner, 2026-08-22, D35): instead of scanning or typing a venue code, the umbrella
+ * home lists the tracks published on the server and the player picks one. For v1, restore the
+ * venue-code entry, QR scan, and the nearby/recent venue lists (see git history for this file).
+ */
 function UmbrellaHomeContent() {
-  const { colors, fonts, radius, space } = useTheme();
+  const { space } = useTheme();
   const { t } = useLanguage();
-  const { venues: recent } = useRecentVenues();
-  const [nearby, setNearby] = useState<VenueSummary[]>([]);
-  const [code, setCode] = useState("");
-  const [codeError, setCodeError] = useState(false);
+  const [state, setState] = useState<TrackList>({ status: "loading" });
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
-    void delivery.nearbyVenues().then((venues) => {
-      if (!cancelled) setNearby(venues);
+    setState({ status: "loading" });
+    void delivery.listAllTracks().then((tracks) => {
+      if (cancelled) return;
+      // null means the server was unreachable; an empty array means it has no tracks.
+      setState(tracks === null ? { status: "error" } : { status: "ready", tracks });
     });
     return () => {
       cancelled = true;
     };
-  }, []);
-
-  const submitCode = () => {
-    const slug = normalizeVenueCode(code);
-    if (!slug) {
-      setCodeError(true);
-      return;
-    }
-    setCodeError(false);
-    router.push(`/v/${slug}`);
-  };
+  }, [reloadKey]);
 
   return (
     <Screen>
@@ -58,50 +55,27 @@ function UmbrellaHomeContent() {
           <ThemedText tone="muted">{t("tagline")}</ThemedText>
         </View>
 
-        <Button label={t("scanVenueCode")} onPress={() => router.push("/scan")} />
-
-        <Card>
-          <Stack gap={1.5}>
-            <ThemedText variant="label">{t("enterVenueCode")}</ThemedText>
-            <View style={{ flexDirection: "row", gap: space(1) }}>
-              <TextInput
-                value={code}
-                onChangeText={(text) => {
-                  setCode(text);
-                  setCodeError(false);
-                }}
-                onSubmitEditing={submitCode}
-                placeholder={t("venueCodePlaceholder")}
-                placeholderTextColor={colors.textMuted}
-                autoCapitalize="none"
-                autoCorrect={false}
-                returnKeyType="go"
-                accessibilityLabel={t("enterVenueCode")}
-                style={{
-                  flex: 1,
-                  minHeight: 48,
-                  borderWidth: 1,
-                  borderColor: codeError ? colors.danger : colors.border,
-                  borderRadius: radius.md,
-                  paddingHorizontal: space(1.5),
-                  color: colors.text,
-                  backgroundColor: colors.background,
-                  fontSize: 16,
-                  fontFamily: fonts.regular,
-                }}
+        <Stack gap={1.5}>
+          <ThemedText variant="label" tone="muted">
+            {t("tracks")}
+          </ThemedText>
+          {state.status === "loading" ? (
+            <ThemedText tone="muted">{t("loading")}</ThemedText>
+          ) : state.status === "error" ? (
+            <Stack gap={1.5}>
+              <ThemedText tone="muted">{t("tracksUnavailable")}</ThemedText>
+              <Button
+                label={t("retry")}
+                variant="secondary"
+                onPress={() => setReloadKey((key) => key + 1)}
               />
-              <Button label={t("go")} variant="accent" onPress={submitCode} />
-            </View>
-            {codeError ? (
-              <ThemedText variant="caption" tone="danger">
-                {t("invalidCode")}
-              </ThemedText>
-            ) : null}
-          </Stack>
-        </Card>
-
-        <VenueList title={t("nearYou")} venues={nearby} />
-        <VenueList title={t("recent")} venues={recent} empty={t("noRecent")} />
+            </Stack>
+          ) : state.tracks.length === 0 ? (
+            <ThemedText tone="muted">{t("noTracks")}</ThemedText>
+          ) : (
+            state.tracks.map((track) => <TrackCard key={track.trackId} track={track} />)
+          )}
+        </Stack>
 
         <Pressable
           accessibilityRole="link"
@@ -112,66 +86,5 @@ function UmbrellaHomeContent() {
         </Pressable>
       </Stack>
     </Screen>
-  );
-}
-
-function VenueList({
-  title,
-  venues,
-  empty,
-}: {
-  title: string;
-  venues: VenueSummary[];
-  empty?: string;
-}) {
-  const { colors, radius, space } = useTheme();
-  const { localized } = useLanguage();
-  if (venues.length === 0 && !empty) return null;
-  return (
-    <Stack gap={1}>
-      <ThemedText variant="label" tone="muted">
-        {title}
-      </ThemedText>
-      {venues.length === 0 ? (
-        <ThemedText variant="caption" tone="muted">
-          {empty}
-        </ThemedText>
-      ) : (
-        venues.map((venue) => (
-          <Pressable
-            key={venue.tenantId}
-            accessibilityRole="button"
-            onPress={() => router.push(`/v/${venue.slug}`)}
-            style={({ pressed }) => ({
-              flexDirection: "row",
-              alignItems: "center",
-              gap: space(1.5),
-              padding: space(1.5),
-              borderRadius: radius.md,
-              backgroundColor: colors.surface,
-              borderWidth: 1,
-              borderColor: colors.border,
-              opacity: pressed ? 0.8 : 1,
-            })}
-          >
-            <View
-              style={{
-                width: 36,
-                height: 36,
-                borderRadius: radius.sm,
-                backgroundColor: colors.primary,
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              <ThemedText variant="label" tone="onPrimary">
-                {localized(venue.displayName).trim().charAt(0).toUpperCase()}
-              </ThemedText>
-            </View>
-            <ThemedText style={{ flex: 1 }}>{localized(venue.displayName)}</ThemedText>
-          </Pressable>
-        ))
-      )}
-    </Stack>
   );
 }

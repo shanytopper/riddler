@@ -23,6 +23,19 @@ export class HttpDeliveryClient implements DeliveryClient {
     );
   }
 
+  async listAllTracks(): Promise<TrackSummary[] | null> {
+    // Distinguish "server unreachable" (null) from "no tracks" ([]): if the venue list itself can't
+    // be fetched, report the failure so the home can offer a retry rather than claim there are none.
+    const venues = await this.getJson<VenueSummary[]>("/venues");
+    if (!venues) return null;
+    const lists = await Promise.all(
+      venues.map((venue) =>
+        this.getJson<TrackSummary[]>(`/tenants/${encodeURIComponent(venue.tenantId)}/tracks`),
+      ),
+    );
+    return lists.flatMap((list) => list ?? []);
+  }
+
   async getTrack(trackId: string): Promise<{ tenant: Tenant; track: TrackSummary } | null> {
     return this.getJson<{ tenant: Tenant; track: TrackSummary }>(
       `/tracks/${encodeURIComponent(trackId)}`,

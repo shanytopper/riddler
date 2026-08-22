@@ -4,7 +4,7 @@ Living record of the design decisions for the rework. Claude raises questions an
 
 The design itself lives in [design.md](design.md).
 
-**Open decisions:** D25, D26, D28, D30, D32, raised by [roadmap.md](roadmap.md) and listed in its decision calendar with the step that needs each; D31 is deferred to the go/no-go. D34 (an operator editor in the prototype) is decided. D27 (hosting), D29 (build method), and D33 (platform scope) are decided. **Provisional (REVISIT after the prototype is played):** D14, D18.
+**Open decisions:** D25, D26, D28, D30, D32, raised by [roadmap.md](roadmap.md) and listed in its decision calendar with the step that needs each; D31 is deferred to the go/no-go. D34 (an operator editor in the prototype) is decided. D35 (prototype front door: Hebrew default + a track picker instead of location codes) is decided. D27 (hosting), D29 (build method), and D33 (platform scope) are decided. **Provisional (REVISIT after the prototype is played):** D14, D18.
 
 ---
 
@@ -167,6 +167,14 @@ Raised by [roadmap.md](roadmap.md); each entry names the step that needs it.
 - **Stack and hosting:** a React + TypeScript single-page app (Vite) in `apps/console`, built during the API's deploy and served by the same Render service under `/console`. This amends D24: the console does not need server rendering, so it is not Next.js; revisit at M2 only if a need appears.
 - **Publishing on the free tier:** the bundle is built on the server; tiles, fonts, and sprites from the previous publish are cached in Postgres and reused, and a tile re-extract runs only when the bounds change (go-pmtiles is fetched during the Render build). Media uploads stay deferred, which keeps the build within the free instance.
 **Consequences:** the roadmap gains a step 8 (Editor v0) before the field test, now step 9; M2 work packages A–E shrink to what v0 leaves out.
+
+### D35. Prototype front door: Hebrew default + track picker — DECIDED 2026-08-22
+**Owner (2026-08-22), after a first test of the hosted prototype:** two prototype-only changes — (1) the app should start in Hebrew, not English; (2) replace the location-code entry (QR scan and typed venue code) with a simple selection out of the tracks that exist on the server.
+**Decision & rationale (both prototype-only; revert for v1):**
+- **Default language = Hebrew.** The pilot venue is in Israel and the testers are Hebrew-speaking, so the first launch defaults to Hebrew regardless of the device language; a user's saved choice in Settings still wins. For v1, restore device-language selection (design §11: the app follows the device, then the user's choice).
+- **Front door = a list of the server's tracks.** With one venue, one track, and no printed QR posters yet, a code/QR front door adds friction for testers. The umbrella home now lists the tracks published on the server and the player taps one; it no longer scans or asks for a venue code. For v1, restore the full §5.1 front door (venue-code entry, QR scan, and the nearby/recent venue lists).
+**Implementation:** `apps/mobile/src/i18n/LanguageProvider.tsx` (`PROTOTYPE_DEFAULT_LANGUAGE = "he"`, saved override still wins); `apps/mobile/app/index.tsx` rewritten to render `delivery.listAllTracks()` as `TrackCard`s routing to the existing `/t/{trackId}`; the delivery client gains `listAllTracks()` (fixture flattens the bundled content, HTTP composes `/venues` + `/tenants/:id/tracks`). Verified on web with the fixture client (home renders in Hebrew and lists the Spring Trail; tapping it opens the track) and against the hosted API's listing endpoints. The QR scan route (`app/scan.tsx`) stays for deep links but is unlinked from the home.
+**Consequences:** app-only change; the API and console are untouched. A new release APK is needed for it to reach a device.
 
 ### D33. Platform scope — DECIDED 2026-08-21
 **Decision:** The prototype is built and tested on Android only. v1 ships on all major mobile platforms, i.e. iOS and Android.

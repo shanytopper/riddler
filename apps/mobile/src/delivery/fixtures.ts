@@ -51,6 +51,10 @@ export class FixtureDeliveryClient implements DeliveryClient {
     return venue ? venue.tracks.map(summarize) : [];
   }
 
+  async listAllTracks(): Promise<TrackSummary[]> {
+    return VENUES.flatMap((venue) => venue.tracks.map(summarize));
+  }
+
   async getTrack(trackId: string): Promise<{ tenant: Tenant; track: TrackSummary } | null> {
     for (const venue of VENUES) {
       const content = venue.tracks.find((track) => track.trackId === trackId);

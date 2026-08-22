@@ -36,6 +36,12 @@ export interface VenueSummary {
 export interface DeliveryClient {
   getTenant(slug: string): Promise<Tenant | null>;
   listTracks(tenantId: string): Promise<TrackSummary[]>;
+  /**
+   * Every published track across all venues — the prototype's home lists these to pick from (D35).
+   * `null` means the server was unreachable (so the home can offer a retry), distinct from `[]`
+   * which means the server has no published tracks.
+   */
+  listAllTracks(): Promise<TrackSummary[] | null>;
   getTrack(trackId: string): Promise<{ tenant: Tenant; track: TrackSummary } | null>;
   nearbyVenues(): Promise<VenueSummary[]>;
   /** The manifest and archive URL of the track's published version; null when unreachable. */

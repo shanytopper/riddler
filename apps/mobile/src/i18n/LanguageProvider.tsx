@@ -1,4 +1,3 @@
-import { getLocales } from "expo-localization";
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { Platform } from "react-native";
 import { getSetting, setSetting } from "../db/prefsRepo.ts";
@@ -6,7 +5,6 @@ import {
   UI_LANGUAGES,
   isRtl,
   localized as localizedText,
-  pickLanguage,
   translate,
   type LocalizedString,
   type StringKey,
@@ -26,15 +24,21 @@ const LanguageContext = createContext<LanguageContextValue | null>(null);
 
 const LANGUAGE_KEY = "language";
 
-const deviceLanguage = (): UiLanguage =>
-  pickLanguage(getLocales().map((locale) => locale.languageCode ?? ""));
+/**
+ * Prototype only (owner, 2026-08-22): the pilot venue is in Israel, so the app starts in Hebrew
+ * regardless of the device language; a saved choice still wins. For v1, restore device-based
+ * selection here — `pickLanguage(getLocales().map((l) => l.languageCode ?? ""))` using
+ * expo-localization's `getLocales` and `pickLanguage` from ./strings — so travelers get their own
+ * language.
+ */
+const PROTOTYPE_DEFAULT_LANGUAGE: UiLanguage = "he";
 
-/** The saved override if one is set and still supported, else the device language. */
+/** The saved override if one is set and still supported, else the prototype default (Hebrew). */
 const initialLanguage = (): UiLanguage => {
   const saved = getSetting(LANGUAGE_KEY);
   return saved && (UI_LANGUAGES as readonly string[]).includes(saved)
     ? (saved as UiLanguage)
-    : deviceLanguage();
+    : PROTOTYPE_DEFAULT_LANGUAGE;
 };
 
 export function LanguageProvider({ children }: { children: ReactNode }) {
