@@ -17,6 +17,7 @@
     "bundle": "node packages/bundle-builder/src/cli.ts build content/ein-dror/tracks/spring-trail/content.json --out apps/mobile/public/bundles --tenant 7c1f0d2e-5a3b-4c8d-9e1f-2a3b4c5d6e7f --version 1 --cache .cache/map-assets",
     "test": "npm test --workspaces --if-present",
     "build": "npm run build -w @riddles/bundle-schema -w @riddles/game-core -w @riddles/bundle-builder",
+    "build:console": "npm run build -w @riddles/console",
     "generate": "npm run generate-types --workspaces --if-present",
     "format": "prettier --write .",
     "format:check": "prettier --check ."

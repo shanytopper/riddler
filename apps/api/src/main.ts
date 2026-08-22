@@ -1,5 +1,6 @@
 import { config } from "./config.ts";
 import { createDatabase } from "./db/client.ts";
+import { registerConsole } from "./editor/routes.ts";
 import { buildServer } from "./server.ts";
 import { PostgresStorage } from "./storage.ts";
 
@@ -16,6 +17,16 @@ async function main(): Promise<void> {
     storage,
     bundleBaseUrl: config.bundleBaseUrl,
     leaderboardTimezone: config.leaderboardTimezone,
+  });
+  await registerConsole(app, {
+    db,
+    storage,
+    password: config.consolePassword,
+    cookieSecret: config.cookieSecret,
+    secureCookie: Boolean(config.databaseUrl),
+    consoleDir: config.consoleDir,
+    build: config.protomapsBuild,
+    pmtilesBin: config.pmtilesBin,
   });
   await app.listen({ port: config.port, host: config.host });
   // eslint-disable-next-line no-console

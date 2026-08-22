@@ -1,0 +1,28 @@
+{
+  "name": "@riddles/console",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "The operator console (Editor v0, D34): edit a track and publish a new version, served by the API under /console.",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@protomaps/basemaps": "^5.7.0",
+    "@riddles/bundle-schema": "*",
+    "maplibre-gl": "^6.4.0",
+    "pmtiles": "^4.5.0",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "react-router-dom": "^7.1.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "@vitejs/plugin-react": "^5.0.0",
+    "typescript": "^5.9.0",
+    "vite": "^7.0.0"
+  }
+}

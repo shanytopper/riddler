@@ -90,3 +90,12 @@ CREATE TABLE IF NOT EXISTS bundle_objects (
   byte_length  INTEGER NOT NULL,
   created_at   TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+-- The editable working copy of a track (Editor v0, D34). Seeded from the published version on first
+-- edit; Publish freezes it into the next track_versions row.
+CREATE TABLE IF NOT EXISTS track_drafts (
+  track_id     TEXT PRIMARY KEY REFERENCES tracks(id),
+  content      JSONB NOT NULL,
+  updated_at   TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+

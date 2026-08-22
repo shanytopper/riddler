@@ -22,6 +22,14 @@ export const config = {
    * which is always published; today's may not be yet. Pin it to reproduce a bundle exactly.
    */
   protomapsBuild: process.env.PROTOMAPS_BUILD ?? yesterdayUtc(),
+  /** The go-pmtiles binary the server uses to extract tiles when the console publishes (D34). */
+  pmtilesBin: process.env.PMTILES_BIN,
+  /** The operator's console password (Editor v0, D34). A weak default for local dev only. */
+  consolePassword: process.env.CONSOLE_PASSWORD ?? "riddles",
+  /** Signs the console session cookie; falls back to the password so a restart keeps sessions. */
+  cookieSecret: process.env.COOKIE_SECRET ?? process.env.CONSOLE_PASSWORD ?? "riddles-console-dev",
+  /** Where the built console SPA is served from; empty in dev (run Vite separately). */
+  consoleDir: process.env.CONSOLE_DIR ?? resolve(here, "../../console/dist"),
 };
 
 function yesterdayUtc(): string {

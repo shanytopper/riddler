@@ -135,5 +135,14 @@ export const bundleObjects = pgTable("bundle_objects", {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
+/** The editable working copy of a track (Editor v0, D34); Publish freezes it into a track version. */
+export const trackDrafts = pgTable("track_drafts", {
+  trackId: text("track_id")
+    .primaryKey()
+    .references(() => tracks.id),
+  content: jsonb("content").notNull().$type<TrackContent>(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
 export type SessionRow = typeof sessions.$inferSelect;
 export type LeaderboardRow = typeof leaderboardEntries.$inferSelect;

@@ -4,7 +4,7 @@ Living record of the design decisions for the rework. Claude raises questions an
 
 The design itself lives in [design.md](design.md).
 
-**Open decisions:** D25, D26, D28, D30, D32, raised by [roadmap.md](roadmap.md) and listed in its decision calendar with the step that needs each; D31 is deferred to the go/no-go. D27 (hosting), D29 (build method), and D33 (platform scope) are decided. **Provisional (REVISIT after the prototype is played):** D14, D18.
+**Open decisions:** D25, D26, D28, D30, D32, raised by [roadmap.md](roadmap.md) and listed in its decision calendar with the step that needs each; D31 is deferred to the go/no-go. D34 (an operator editor in the prototype) is decided. D27 (hosting), D29 (build method), and D33 (platform scope) are decided. **Provisional (REVISIT after the prototype is played):** D14, D18.
 
 ---
 
@@ -156,6 +156,17 @@ Raised by [roadmap.md](roadmap.md); each entry names the step that needs it.
 **Options:** an HTML preview that mirrors the app's station screens; rendering the real React Native components through react-native-web from a shared UI package.
 **Recommendation:** HTML preview in v1; the shared-components route is a stretch goal once the station screens are stable.
 **Decision:** _pending_
+
+### D34. An operator editor in the prototype — DECIDED 2026-08-22
+**Owner (2026-08-22):** "the prototype is not complete without an editor to the server side." This revises D20, which had the prototype authored as JSON and published by a script, with the console deferred to M2.
+**What it pulls forward:** a subset of M2 work packages A–E (console foundation, track editor, map editor, validation, publishing pipeline) — enough for an operator to change the Spring Trail and publish it without touching JSON, for the go/no-go demo.
+**Open sub-decisions (owner):** (a) scope of the first editor; (b) access control for a prototype editor on the public internet; (c) stack and hosting — a React SPA served by the existing API service, or Next.js as its own service per D24; (d) whether media uploads are in scope.
+**Decision (owner, 2026-08-22, all four recommendations confirmed):**
+- **Scope — "Editor v0":** track details and rules; a reorderable station list with a per-station editor (title, intro paragraphs, the three challenge types, hints with costs, points, reveal and clue), Hebrew and English side by side with per-language completeness; a map to drag station pins; the validation report; Publish, which creates version N+1 and builds the bundle on the server; leaderboard moderation (hide an entry). Deferred to M2: image uploads, the translation tab, the phone-frame preview (D32), branding and users, version-history UI, a Hebrew console UI.
+- **Access:** one operator password in an environment variable with a session cookie; accounts and email links stay in M2 (WP-A).
+- **Stack and hosting:** a React + TypeScript single-page app (Vite) in `apps/console`, built during the API's deploy and served by the same Render service under `/console`. This amends D24: the console does not need server rendering, so it is not Next.js; revisit at M2 only if a need appears.
+- **Publishing on the free tier:** the bundle is built on the server; tiles, fonts, and sprites from the previous publish are cached in Postgres and reused, and a tile re-extract runs only when the bounds change (go-pmtiles is fetched during the Render build). Media uploads stay deferred, which keeps the build within the free instance.
+**Consequences:** the roadmap gains a step 8 (Editor v0) before the field test, now step 9; M2 work packages A–E shrink to what v0 leaves out.
 
 ### D33. Platform scope — DECIDED 2026-08-21
 **Decision:** The prototype is built and tested on Android only. v1 ships on all major mobile platforms, i.e. iOS and Android.
