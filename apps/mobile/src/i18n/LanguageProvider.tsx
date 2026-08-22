@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
-import { Platform } from "react-native";
+import { I18nManager, Platform } from "react-native";
 import { getSetting, setSetting } from "../db/prefsRepo.ts";
 import {
   UI_LANGUAGES,
@@ -13,7 +13,7 @@ import {
 
 export interface LanguageContextValue {
   language: UiLanguage;
-  /** Direction of the UI language. Native layout mirroring follows the device via I18nManager. */
+  /** Direction of the UI language. Native layout mirroring is synced to it via I18nManager (D35). */
   isRTL: boolean;
   setLanguage: (language: UiLanguage) => void;
   t: (key: StringKey, params?: Record<string, string | number>) => string;
@@ -41,6 +41,21 @@ const initialLanguage = (): UiLanguage => {
     : PROTOTYPE_DEFAULT_LANGUAGE;
 };
 
+/**
+ * Mirrors the native layout to the UI language (D35): Hebrew → RTL, English → LTR. React Native
+ * fixes the layout direction at native startup, so a change only takes effect after the app is
+ * relaunched — the Settings screen's restart note says so. On a device whose system language already
+ * matches (e.g. a Hebrew phone for the Hebrew default) the first launch is already correct; only a
+ * mismatched device (e.g. an English emulator) needs the one-time restart. No-op on web, where the
+ * direction is set through `document.dir` instead.
+ */
+const syncLayoutDirection = (language: UiLanguage): void => {
+  if (Platform.OS === "web") return;
+  const wantRTL = isRtl(language);
+  I18nManager.allowRTL(true);
+  if (I18nManager.isRTL !== wantRTL) I18nManager.forceRTL(wantRTL);
+};
+
 export function LanguageProvider({ children }: { children: ReactNode }) {
   const [language, setLanguageState] = useState<UiLanguage>(initialLanguage);
   const isRTL = isRtl(language);
@@ -49,6 +64,11 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     setSetting(LANGUAGE_KEY, next);
     setLanguageState(next);
   };
+
+  // Keep the native layout direction aligned with the language (applies on the next restart).
+  useEffect(() => {
+    syncLayoutDirection(language);
+  }, [language]);
 
   useEffect(() => {
     if (Platform.OS === "web" && typeof document !== "undefined") {
