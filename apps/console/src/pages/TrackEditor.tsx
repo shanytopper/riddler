@@ -4,8 +4,8 @@ import { Link, useParams } from "react-router-dom";
 import { api, type Issue, type ValidationReport } from "../api.ts";
 import { LocalizedField } from "../components/LocalizedField.tsx";
 import { Leaderboard } from "../components/Leaderboard.tsx";
-import { MapPins, type Pin } from "../components/MapPins.tsx";
 import { StationEditor } from "../components/StationEditor.tsx";
+import type { ContextPin } from "../components/StationMap.tsx";
 import type { EditStation, Loc } from "../model.ts";
 import { blankStation, stationsOf } from "../model.ts";
 
@@ -17,8 +17,18 @@ function legCenter(content: TrackContent): { lat: number; lng: number } {
   return { lat: (south + north) / 2, lng: (west + east) / 2 };
 }
 
-type Tab = "details" | "stations" | "map" | "leaderboard";
+type Tab = "details" | "stations" | "leaderboard";
 type Status = { kind: "ok" | "err" | "warn"; text: string } | null;
+
+/** The other stations, as faint context pins for one station's map. */
+function contextPins(content: TrackContent, exceptIndex: number): ContextPin[] {
+  return (content.legs[0]?.stations ?? []).flatMap((station, i) => {
+    const loc = (station as unknown as EditStation).location;
+    return i === exceptIndex || !loc
+      ? []
+      : [{ id: station.id, number: i + 1, lat: loc.lat, lng: loc.lng }];
+  });
+}
 
 export function TrackEditor() {
   const { id = "" } = useParams();
@@ -122,7 +132,7 @@ export function TrackEditor() {
       <h1>{(content.name as Loc).en ?? (content.name as Loc).he ?? content.slug}</h1>
 
       <div className="tabs">
-        {(["details", "stations", "map", "leaderboard"] as Tab[]).map((t) => (
+        {(["details", "stations", "leaderboard"] as Tab[]).map((t) => (
           <button key={t} className={t === tab ? "active" : ""} onClick={() => setTab(t)}>
             {t[0]!.toUpperCase() + t.slice(1)}
           </button>
@@ -145,6 +155,8 @@ export function TrackEditor() {
               index={index}
               count={stations.length}
               languages={languages}
+              context={contextPins(content, index)}
+              center={legCenter(content)}
               update={(fn) =>
                 patch((next) => {
                   const s = next.legs[0]?.stations[index];
@@ -186,13 +198,11 @@ export function TrackEditor() {
               Add station
             </button>
             <span className="muted small">
-              A new station starts at the map centre — drag its pin on the Map tab.
+              A new station starts at the map centre — open it and drag its pin.
             </span>
           </div>
         </div>
       ) : null}
-
-      {tab === "map" ? <MapTab content={content} patch={patch} /> : null}
 
       {tab === "leaderboard" ? (
         <div className="card">
@@ -326,40 +336,6 @@ function Details({
         />
         Leaderboard enabled
       </label>
-    </div>
-  );
-}
-
-function MapTab({
-  content,
-  patch,
-}: {
-  content: TrackContent;
-  patch: (fn: (draft: TrackContent) => void) => void;
-}) {
-  const map = content.legs[0]?.map;
-  const bounds =
-    map && map.kind === "tiles"
-      ? (map.bounds as [number, number, number, number])
-      : ([34.8, 32.09, 34.82, 32.11] as [number, number, number, number]);
-  const pins: Pin[] = stationsOf(content).flatMap((station, i) => {
-    const loc = (station as unknown as EditStation).location;
-    return loc ? [{ id: station.id, number: i + 1, lat: loc.lat, lng: loc.lng }] : [];
-  });
-
-  return (
-    <div>
-      <p className="muted small">Drag a pin to move that station. Positions save with the draft.</p>
-      <MapPins
-        pins={pins}
-        bounds={bounds}
-        onMove={(stationId, lat, lng) =>
-          patch((c) => {
-            const s = c.legs[0]?.stations.find((st) => st.id === stationId);
-            if (s) (s as unknown as EditStation).location = { lat, lng };
-          })
-        }
-      />
     </div>
   );
 }

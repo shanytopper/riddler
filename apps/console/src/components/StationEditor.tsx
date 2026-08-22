@@ -1,31 +1,45 @@
+import { useState } from "react";
 import type { EditStation, Loc } from "../model.ts";
 import { ChallengeEditor } from "./ChallengeEditor.tsx";
 import { LocalizedField } from "./LocalizedField.tsx";
+import { StationMap, type ContextPin } from "./StationMap.tsx";
 
 interface Props {
   station: EditStation;
   index: number;
   count: number;
   languages: readonly string[];
+  /** The other stations, for orientation on this station's map. */
+  context: ContextPin[];
+  /** A fallback position (the leg's centre) for a station that has no location yet. */
+  center: { lat: number; lng: number };
   update: (fn: (station: EditStation) => void) => void;
   onMove: (dir: -1 | 1) => void;
   onRemove: () => void;
 }
 
-/** Editor for a single station: title, intro, challenge, hints, points, and how it is revealed. */
+/** Editor for a single station: title, location, intro, challenge, hints, points, and reveal. */
 export function StationEditor({
   station,
   index,
   count,
   languages,
+  context,
+  center,
   update,
   onMove,
   onRemove,
 }: Props) {
+  const [open, setOpen] = useState(index === 0);
   const paragraphs = (station.intro ?? []).filter((b) => b.type === "paragraph");
+  const loc = station.location ?? center;
 
   return (
-    <details className="station" open={index === 0}>
+    <details
+      className="station"
+      open={open}
+      onToggle={(e) => setOpen((e.currentTarget as HTMLDetailsElement).open)}
+    >
       <summary>
         <span className="num">{index + 1}</span>
         <strong>{station.title.en || station.title.he || "Untitled station"}</strong>
@@ -68,6 +82,47 @@ export function StationEditor({
           languages={languages}
           onChange={(lang, text) => update((s) => void (s.title[lang] = text))}
         />
+
+        <h2>Location</h2>
+        <div className="row">
+          <div className="field">
+            <label>Latitude</label>
+            <input
+              type="number"
+              step="0.0001"
+              value={loc.lat}
+              onChange={(e) => {
+                // Ignore an empty/partial field so it never coerces the station to latitude 0.
+                const lat = e.target.valueAsNumber;
+                if (Number.isFinite(lat)) update((s) => void (s.location = { lat, lng: loc.lng }));
+              }}
+            />
+          </div>
+          <div className="field">
+            <label>Longitude</label>
+            <input
+              type="number"
+              step="0.0001"
+              value={loc.lng}
+              onChange={(e) => {
+                const lng = e.target.valueAsNumber;
+                if (Number.isFinite(lng)) update((s) => void (s.location = { lat: loc.lat, lng }));
+              }}
+            />
+          </div>
+        </div>
+        {open ? (
+          <StationMap
+            number={index + 1}
+            location={loc}
+            context={context}
+            onMove={(lat, lng) => update((s) => void (s.location = { lat, lng }))}
+          />
+        ) : null}
+        <p className="muted small">
+          Drag the pin or click the map, or type coordinates above. Switch to Satellite to place it
+          on the ground.
+        </p>
 
         <div className="field">
           <label>Intro paragraphs (shown on arrival)</label>

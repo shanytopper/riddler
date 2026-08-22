@@ -1,4 +1,4 @@
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import fastifyCookie from "@fastify/cookie";
 import fastifyStatic from "@fastify/static";
@@ -155,8 +155,12 @@ export async function registerConsole(app: FastifyInstance, deps: ConsoleDeps): 
       prefix: "/console/",
       wildcard: false,
     });
+    // Serve index.html with no-cache so that after a deploy the browser always fetches the current
+    // one (which references the new hashed bundle) instead of a stale copy pointing at a 404'd asset.
+    // The hashed assets themselves stay cacheable via @fastify/static.
+    const indexPath = join(deps.consoleDir, "index.html");
     const sendIndex = (_request: FastifyRequest, reply: FastifyReply) =>
-      reply.sendFile("index.html", deps.consoleDir);
+      reply.header("cache-control", "no-cache").type("text/html").send(readFileSync(indexPath));
     app.get("/console", sendIndex);
     app.get("/console/*", sendIndex);
   }

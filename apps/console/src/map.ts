@@ -1,45 +1,56 @@
-import { layers, namedFlavor } from "@protomaps/basemaps";
-import {
-  BASEMAP_ASSETS_BASE_URL,
-  glyphsUrlTemplate,
-  protomapsBuildUrl,
-  spriteUrl,
-} from "@riddles/bundle-schema/map-assets";
-import { addProtocol, type StyleSpecification } from "maplibre-gl";
-import { Protocol } from "pmtiles";
-
-let registered = false;
-
-/** Registers the pmtiles:// protocol once, so the map can read the public Protomaps build. */
-export function registerPmtiles(): void {
-  if (registered) return;
-  const protocol = new Protocol();
-  addProtocol("pmtiles", protocol.tile);
-  registered = true;
-}
+import type { StyleSpecification } from "maplibre-gl";
 
 /**
- * The console's map style, assembled from the public Protomaps daily build and the public basemap
- * assets — the same layers the app uses, but online (the console is used at a desk). Grayscale so a
- * dragged pin stands out.
+ * The console is used online at a desk, so it shows a plain raster basemap rather than the app's
+ * offline Protomaps vector tiles (which the browser cannot range-request cross-origin). Streets
+ * (OpenStreetMap) for names and paths; satellite (Esri World Imagery) to place a station on the
+ * real ground — useful for an outdoor trail.
  */
-export function consoleStyle(build: string): StyleSpecification {
+export type Basemap = "streets" | "satellite";
+
+const SOURCES: Record<Basemap, { tiles: string[]; attribution: string; maxZoom: number }> = {
+  streets: {
+    tiles: ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"],
+    attribution: "© OpenStreetMap contributors",
+    maxZoom: 19,
+  },
+  satellite: {
+    // Esri World Imagery uses {z}/{y}/{x} order.
+    tiles: [
+      "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+    ],
+    attribution: "Imagery © Esri, Maxar, Earthstar Geographics",
+    maxZoom: 19,
+  },
+};
+
+export const BASEMAPS: Basemap[] = ["streets", "satellite"];
+
+export const basemapLabel = (basemap: Basemap): string =>
+  basemap === "streets" ? "Streets" : "Satellite";
+
+// The operator's last basemap choice, remembered for the session so every station map opens the
+// same way (a station map is unmounted when its section collapses).
+let lastBasemap: Basemap = "streets";
+export const getLastBasemap = (): Basemap => lastBasemap;
+export const rememberBasemap = (basemap: Basemap): void => {
+  lastBasemap = basemap;
+};
+
+/** A single-source raster style for the console map. */
+export function consoleStyle(basemap: Basemap = "streets"): StyleSpecification {
+  const source = SOURCES[basemap];
   return {
     version: 8,
-    glyphs: glyphsUrlTemplate(BASEMAP_ASSETS_BASE_URL),
-    sprite: spriteUrl(BASEMAP_ASSETS_BASE_URL, "grayscale", true),
     sources: {
-      protomaps: {
-        type: "vector",
-        url: `pmtiles://${protomapsBuildUrl(build)}`,
-        attribution: "© OpenStreetMap contributors · Protomaps",
+      base: {
+        type: "raster",
+        tiles: source.tiles,
+        tileSize: 256,
+        maxzoom: source.maxZoom,
+        attribution: source.attribution,
       },
     },
-    layers: layers("protomaps", namedFlavor("grayscale"), { lang: "en" }),
-  } as unknown as StyleSpecification;
-}
-
-/** Yesterday in UTC as YYYYMMDD — the Protomaps build for today may not be published yet. */
-export function yesterdayBuild(): string {
-  return new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().slice(0, 10).replaceAll("-", "");
+    layers: [{ id: "base", type: "raster", source: "base" }],
+  };
 }
