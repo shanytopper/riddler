@@ -81,6 +81,8 @@ CREATE TABLE IF NOT EXISTS leaderboard_entries (
 
 CREATE INDEX IF NOT EXISTS leaderboard_by_track ON leaderboard_entries (track_id, track_version, hidden);
 CREATE INDEX IF NOT EXISTS tracks_by_tenant ON tracks (tenant_id);
+-- Track slugs are unique within a tenant (design invariant, used in deep links).
+CREATE UNIQUE INDEX IF NOT EXISTS tracks_tenant_slug_unique ON tracks (tenant_id, slug);
 
 -- Bundle archives themselves (prototype object storage, D27). Keyed by the bundles.object_key.
 CREATE TABLE IF NOT EXISTS bundle_objects (

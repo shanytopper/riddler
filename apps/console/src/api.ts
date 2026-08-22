@@ -64,6 +64,11 @@ export const api = {
     }),
   logout: () => call<{ ok: true }>("/console-api/logout", { method: "POST" }),
   tracks: () => call<{ tracks: EditorTrack[] }>("/console-api/tracks").then((r) => r.tracks),
+  createTrack: (name: string) =>
+    call<{ trackId: string; slug: string }>("/console-api/tracks", {
+      method: "POST",
+      body: JSON.stringify({ name }),
+    }),
   track: (id: string) =>
     call<{ content: TrackContent }>(`/console-api/tracks/${encodeURIComponent(id)}`).then(
       (r) => r.content,

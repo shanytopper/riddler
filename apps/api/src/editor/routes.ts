@@ -10,7 +10,15 @@ import { ApiError, badRequest, forbidden, notFound } from "../errors.ts";
 import type { BundleBuilderFn } from "../publish.ts";
 import type { Storage } from "../storage.ts";
 import { CONSOLE_COOKIE, checkPassword, issueToken, verifyToken } from "./auth.ts";
-import { getDraft, listEditorTracks, publishDraft, saveDraft, validateDraft } from "./drafts.ts";
+import {
+  createTrack,
+  getDraft,
+  listEditorTracks,
+  operatorTenantId,
+  publishDraft,
+  saveDraft,
+  validateDraft,
+} from "./drafts.ts";
 
 export interface ConsoleDeps {
   db: Db;
@@ -60,6 +68,16 @@ export async function registerConsole(app: FastifyInstance, deps: ConsoleDeps): 
   app.get("/console-api/tracks", async (request) => {
     requireAuth(request);
     return { tracks: await listEditorTracks(deps.db) };
+  });
+
+  app.post("/console-api/tracks", async (request) => {
+    requireAuth(request);
+    const body = (request.body ?? {}) as { name?: unknown };
+    const name = typeof body.name === "string" ? body.name : "";
+    // The prototype console serves one operator; the tenant is resolved server-side, never trusted
+    // from the client.
+    const tenantId = await operatorTenantId(deps.db);
+    return createTrack(deps.db, tenantId, name);
   });
 
   app.get("/console-api/tracks/:trackId", async (request) => {

@@ -1,4 +1,4 @@
-import type { Challenge, TrackContent } from "@riddles/bundle-schema";
+import type { Challenge, Station, TrackContent } from "@riddles/bundle-schema";
 
 /** A localized string as the editor treats it — every language optional while editing. */
 export type Loc = Record<string, string | undefined>;
@@ -74,6 +74,25 @@ export const isComplete = (value: Loc | undefined, languages: readonly string[])
 
 /** The stations of the (single, in v0) leg. */
 export const stationsOf = (content: TrackContent) => content.legs[0]?.stations ?? [];
+
+/**
+ * A fresh info station (no challenge, no points, shown as a pin) at a point inside the leg's map.
+ * The operator renames it and adds a challenge; its id is minted once and kept across versions.
+ * Assumes a tiles map (it sets `location`, not `imagePosition`) — the only map kind the prototype
+ * console produces; an image-map leg would need `imagePosition` instead.
+ */
+export function blankStation(location: { lat: number; lng: number }): Station {
+  return {
+    id: crypto.randomUUID(),
+    title: { he: "תחנה חדשה", en: "New station" },
+    arrival: { methods: [], automatic: false },
+    challenge: null,
+    hints: [],
+    points: 0,
+    reveal: { as: "pin" },
+    location,
+  } satisfies Station;
+}
 
 /** A fresh, valid-shape challenge of the given type, for switching a station's challenge kind. */
 export function blankChallenge(type: ChallengeType): Challenge {

@@ -1,4 +1,4 @@
-import type { TrackContent } from "@riddles/bundle-schema";
+import type { Station, TrackContent } from "@riddles/bundle-schema";
 import { useCallback, useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { api, type Issue, type ValidationReport } from "../api.ts";
@@ -7,7 +7,15 @@ import { Leaderboard } from "../components/Leaderboard.tsx";
 import { MapPins, type Pin } from "../components/MapPins.tsx";
 import { StationEditor } from "../components/StationEditor.tsx";
 import type { EditStation, Loc } from "../model.ts";
-import { stationsOf } from "../model.ts";
+import { blankStation, stationsOf } from "../model.ts";
+
+/** The centre of a leg's map, where a newly added station starts (inside the bounds, so it is valid). */
+function legCenter(content: TrackContent): { lat: number; lng: number } {
+  const map = content.legs[0]?.map;
+  const [west, south, east, north] =
+    map && map.kind === "tiles" ? map.bounds : [34.8, 32.09, 34.82, 32.11];
+  return { lat: (south + north) / 2, lng: (west + east) / 2 };
+}
 
 type Tab = "details" | "stations" | "map" | "leaderboard";
 type Status = { kind: "ok" | "err" | "warn"; text: string } | null;
@@ -156,8 +164,31 @@ export function TrackEditor() {
                   }
                 })
               }
+              onRemove={() =>
+                patch((next) => {
+                  const arr = next.legs[0]?.stations;
+                  // A leg must keep at least one station (schema minItems: 1).
+                  if (arr && arr.length > 1) (arr as Station[]).splice(index, 1);
+                })
+              }
             />
           ))}
+          <div className="actions" style={{ marginTop: 12 }}>
+            <button
+              className="primary"
+              onClick={() =>
+                patch((next) => {
+                  const leg = next.legs[0];
+                  if (leg) (leg.stations as Station[]).push(blankStation(legCenter(next)));
+                })
+              }
+            >
+              Add station
+            </button>
+            <span className="muted small">
+              A new station starts at the map centre — drag its pin on the Map tab.
+            </span>
+          </div>
         </div>
       ) : null}
 

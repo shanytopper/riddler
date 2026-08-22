@@ -9,10 +9,19 @@ interface Props {
   languages: readonly string[];
   update: (fn: (station: EditStation) => void) => void;
   onMove: (dir: -1 | 1) => void;
+  onRemove: () => void;
 }
 
 /** Editor for a single station: title, intro, challenge, hints, points, and how it is revealed. */
-export function StationEditor({ station, index, count, languages, update, onMove }: Props) {
+export function StationEditor({
+  station,
+  index,
+  count,
+  languages,
+  update,
+  onMove,
+  onRemove,
+}: Props) {
   const paragraphs = (station.intro ?? []).filter((b) => b.type === "paragraph");
 
   return (
@@ -39,6 +48,15 @@ export function StationEditor({ station, index, count, languages, update, onMove
             onClick={() => onMove(1)}
           >
             ↓
+          </button>
+          <button
+            type="button"
+            className="small ghost"
+            disabled={count === 1}
+            title={count === 1 ? "A track needs at least one station" : "Remove this station"}
+            onClick={() => onRemove()}
+          >
+            Remove
           </button>
         </span>
       </summary>

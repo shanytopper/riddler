@@ -1,10 +1,13 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { api, type EditorTrack } from "../api.ts";
 
 export function TracksList() {
+  const navigate = useNavigate();
   const [tracks, setTracks] = useState<EditorTrack[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [name, setName] = useState("");
+  const [creating, setCreating] = useState(false);
 
   useEffect(() => {
     void api
@@ -13,10 +16,46 @@ export function TracksList() {
       .catch(() => setError("Could not load tracks."));
   }, []);
 
+  const create = async () => {
+    setCreating(true);
+    setError(null);
+    try {
+      const { trackId } = await api.createTrack(name.trim());
+      navigate(`/tracks/${trackId}`);
+    } catch (e) {
+      setError(api.isApiError(e) ? e.message : "Could not create the track.");
+      setCreating(false);
+    }
+  };
+
   return (
     <div className="wrap">
       <h1>Tracks</h1>
       <p className="muted">Edit a track's content and publish a new version.</p>
+
+      <div className="card">
+        <label htmlFor="new-track">New track</label>
+        <div className="actions" style={{ marginTop: 6 }}>
+          <input
+            id="new-track"
+            type="text"
+            value={name}
+            placeholder="Track name"
+            onChange={(e) => setName(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !creating) void create();
+            }}
+            style={{ flex: 1 }}
+          />
+          <button className="primary" onClick={() => void create()} disabled={creating}>
+            {creating ? "Creating…" : "Create track"}
+          </button>
+        </div>
+        <p className="muted small" style={{ marginTop: 6 }}>
+          Creates an empty, unpublished track with one station to build from.
+        </p>
+      </div>
+
       {error ? <div className="banner err">{error}</div> : null}
       {!tracks ? (
         <p className="muted">Loading…</p>

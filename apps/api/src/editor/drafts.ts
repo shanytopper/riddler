@@ -1,6 +1,7 @@
-import type { Issue, TrackContent } from "@riddles/bundle-schema";
+import { randomUUID } from "node:crypto";
+import type { Issue, Station, TrackContent } from "@riddles/bundle-schema";
 import { hasErrors, validateDocument } from "@riddles/bundle-schema";
-import { desc, eq, sql } from "drizzle-orm";
+import { asc, desc, eq, sql } from "drizzle-orm";
 import type { Db } from "../db/client.ts";
 import { tenants, trackDrafts, trackVersions, tracks } from "../db/schema.ts";
 import { badRequest, notFound } from "../errors.ts";
@@ -159,4 +160,149 @@ async function maxVersion(db: Db, trackId: string): Promise<number> {
       .where(eq(trackVersions.trackId, trackId))
   )[0];
   return Number(row?.max ?? 0);
+}
+
+// --- Creating a new track (D35 follow-up) ---------------------------------------------------------
+// The prototype console serves a single operator, so a new track is created under the one tenant and
+// seeded with a minimal but valid skeleton the operator then fills in.
+
+/** A default map region near the pilot venue, used when the tenant has no track to copy bounds from. */
+const DEFAULT_MAP = {
+  kind: "tiles" as const,
+  bounds: [34.8, 32.09, 34.82, 32.11] as [number, number, number, number],
+  minZoom: 13,
+  maxZoom: 18,
+};
+
+/** The single operator tenant (the prototype has exactly one); the oldest if several ever exist. */
+export async function operatorTenantId(db: Db): Promise<string> {
+  const row = (
+    await db.select({ id: tenants.id }).from(tenants).orderBy(asc(tenants.createdAt)).limit(1)
+  )[0];
+  if (!row) throw notFound("no venue is configured");
+  return row.id;
+}
+
+/** The map (bounds + zoom) for a new track: reuse a track of the same tenant so it sits at the same venue. */
+async function defaultLegMap(db: Db, tenantId: string): Promise<typeof DEFAULT_MAP> {
+  const row = (
+    await db
+      .select({ content: trackVersions.content })
+      .from(trackVersions)
+      .innerJoin(tracks, eq(trackVersions.trackId, tracks.id))
+      .where(eq(tracks.tenantId, tenantId))
+      .orderBy(desc(trackVersions.publishedAt))
+      .limit(1)
+  )[0];
+  const map = row?.content.legs[0]?.map;
+  if (map && map.kind === "tiles") {
+    return {
+      kind: "tiles",
+      bounds: [...map.bounds] as [number, number, number, number],
+      minZoom: map.minZoom,
+      maxZoom: map.maxZoom,
+    };
+  }
+  return { ...DEFAULT_MAP, bounds: [...DEFAULT_MAP.bounds] as [number, number, number, number] };
+}
+
+function slugify(name: string): string {
+  // Trim the trailing hyphen AFTER slicing — otherwise the length cap can reintroduce one and the
+  // slug fails the schema pattern ^[a-z0-9]+(-[a-z0-9]+)*$.
+  const base = name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+/, "")
+    .slice(0, 48)
+    .replace(/-+$/, "");
+  return base || "track";
+}
+
+async function uniqueSlug(db: Db, tenantId: string, base: string): Promise<string> {
+  const taken = new Set(
+    (await db.select({ slug: tracks.slug }).from(tracks).where(eq(tracks.tenantId, tenantId))).map(
+      (row) => row.slug,
+    ),
+  );
+  if (!taken.has(base)) return base;
+  for (let i = 2; i < 1000; i++) {
+    const candidate = `${base}-${i}`;
+    if (!taken.has(candidate)) return candidate;
+  }
+  return `${base}-${randomUUID().slice(0, 8)}`;
+}
+
+/** One info station at a point (a valid seed: no challenge, no points, shown as a pin). */
+function seedStation(location: { lat: number; lng: number }): Station {
+  return {
+    id: randomUUID(),
+    title: { he: "תחנה חדשה", en: "New station" },
+    arrival: { methods: [], automatic: false },
+    challenge: null,
+    hints: [],
+    points: 0,
+    reveal: { as: "pin" },
+    location,
+  } satisfies Station;
+}
+
+/**
+ * Creates a new, unpublished track for the tenant with a minimal editable skeleton — a valid
+ * one-leg, one-station document the operator then builds out and publishes. Fails if the skeleton
+ * does not match the schema (a bug, not operator input).
+ */
+export async function createTrack(
+  db: Db,
+  tenantId: string,
+  name: string,
+): Promise<{ trackId: string; slug: string }> {
+  const trackId = randomUUID();
+  const trimmed = name.trim();
+  const displayName = trimmed || "New track";
+  let slug = await uniqueSlug(db, tenantId, slugify(trimmed));
+  const map = await defaultLegMap(db, tenantId);
+  const center = {
+    lat: (map.bounds[1] + map.bounds[3]) / 2,
+    lng: (map.bounds[0] + map.bounds[2]) / 2,
+  };
+  const content: TrackContent = {
+    schemaVersion: 1,
+    trackId,
+    slug,
+    name: { he: displayName, en: displayName },
+    description: { he: "תיאור המסלול", en: "Track description" },
+    languages: ["he", "en"],
+    defaultLanguage: "he",
+    difficulty: "easy",
+    estimate: { durationMinutes: 60, distanceMeters: 1000 },
+    safetyNotes: { he: "הנחיות בטיחות", en: "Safety notes" },
+    rules: {
+      order: "linear",
+      visibility: "progressive",
+      revealAndContinue: "afterFirstHint",
+      wrongChoicePenaltyPercent: 25,
+      timeBonus: null,
+      leaderboard: true,
+    },
+    media: [],
+    legs: [{ id: randomUUID(), map, stations: [seedStation(center)] }],
+  };
+
+  const report = validateDocument("content", content);
+  if (report.schema.length > 0)
+    throw new Error(
+      `new-track skeleton failed the schema: ${report.schema[0]?.message ?? "invalid"}`,
+    );
+
+  // uniqueSlug is best-effort; the unique index on (tenant_id, slug) is the real guard. On the rare
+  // race where two creates pick the same slug, fall back to a globally unique suffix rather than 500.
+  try {
+    await db.insert(tracks).values({ id: trackId, tenantId, slug, publishedVersion: null });
+  } catch {
+    slug = `${slug}-${randomUUID().slice(0, 8)}`.slice(0, 64);
+    content.slug = slug;
+    await db.insert(tracks).values({ id: trackId, tenantId, slug, publishedVersion: null });
+  }
+  await db.insert(trackDrafts).values({ trackId, content, updatedAt: new Date() });
+  return { trackId, slug };
 }
