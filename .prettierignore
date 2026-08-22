@@ -1,0 +1,12 @@
+# hand-authored content keeps its compact formatting
+content/
+# prose is not reflowed
+docs/
+# generated
+dist/
+node_modules/
+packages/bundle-schema/src/generated/
+package-lock.json
+
+# vendored browser assets copied from node_modules (scripts/sync-web-assets.mjs)
+apps/mobile/public/vendor/

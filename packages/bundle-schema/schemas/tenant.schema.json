@@ -1,0 +1,135 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://riddles.invalid/schemas/bundle/v1/tenant.schema.json",
+  "title": "Tenant (venue) document",
+  "description": "The operator's public presence as the app receives it from the delivery API when a venue is entered. Not part of a track bundle: it is fetched online and cached on the device. A dedicated build pins one tenant at build time.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "tenantId",
+    "slug",
+    "displayName",
+    "about",
+    "countryCode",
+    "languages",
+    "defaultLanguage",
+    "theme",
+    "contacts",
+    "legal"
+  ],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "tenantId": { "$ref": "#/$defs/uuid" },
+    "slug": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
+      "maxLength": 32,
+      "description": "The venue code visitors can type and the path segment in deep links (/v/<slug>)."
+    },
+    "displayName": { "$ref": "#/$defs/localizedString" },
+    "about": { "$ref": "#/$defs/localizedString" },
+    "countryCode": {
+      "type": "string",
+      "pattern": "^[A-Z]{2}$",
+      "description": "ISO 3166-1 alpha-2. Selects the local emergency number."
+    },
+    "languages": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/languageCode" }
+    },
+    "defaultLanguage": { "$ref": "#/$defs/languageCode" },
+    "websiteUrl": { "$ref": "#/$defs/httpsUrlOrNull" },
+    "theme": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "primary",
+        "onPrimary",
+        "accent",
+        "onAccent",
+        "background",
+        "typography",
+        "logoUrl",
+        "logoDarkUrl",
+        "coverUrl"
+      ],
+      "properties": {
+        "primary": { "$ref": "#/$defs/hexColor" },
+        "onPrimary": {
+          "$ref": "#/$defs/hexColor",
+          "description": "Text and icons drawn on `primary`. The console enforces a contrast ratio of at least 4.5:1."
+        },
+        "accent": { "$ref": "#/$defs/hexColor" },
+        "onAccent": { "$ref": "#/$defs/hexColor" },
+        "background": { "enum": ["light", "dark"] },
+        "typography": {
+          "enum": ["heebo", "assistant", "rubik", "system"],
+          "description": "Pairings that cover Hebrew and Latin. Bundled with the app, not downloaded."
+        },
+        "logoUrl": { "$ref": "#/$defs/httpsUrlOrNull" },
+        "logoDarkUrl": { "$ref": "#/$defs/httpsUrlOrNull" },
+        "coverUrl": { "$ref": "#/$defs/httpsUrlOrNull" }
+      }
+    },
+    "contacts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["support", "emergency"],
+      "properties": {
+        "support": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "phone": { "$ref": "#/$defs/phoneOrNull" },
+            "email": { "oneOf": [{ "type": "string", "format": "email" }, { "type": "null" }] },
+            "url": { "$ref": "#/$defs/httpsUrlOrNull" }
+          }
+        },
+        "emergency": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["phone"],
+          "properties": {
+            "phone": {
+              "$ref": "#/$defs/phoneOrNull",
+              "description": "The operator's own emergency line, shown next to the country's emergency number. Null if none."
+            },
+            "note": { "$ref": "#/$defs/localizedString" }
+          }
+        }
+      }
+    },
+    "legal": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["privacyUrl", "termsUrl"],
+      "properties": {
+        "privacyUrl": { "$ref": "#/$defs/httpsUrl" },
+        "termsUrl": { "$ref": "#/$defs/httpsUrl" }
+      }
+    }
+  },
+  "$defs": {
+    "uuid": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+    },
+    "languageCode": { "type": "string", "pattern": "^[a-z]{2}(-[A-Z]{2})?$" },
+    "localizedString": {
+      "type": "object",
+      "minProperties": 1,
+      "propertyNames": { "pattern": "^[a-z]{2}(-[A-Z]{2})?$" },
+      "additionalProperties": { "type": "string", "minLength": 1 }
+    },
+    "hexColor": { "type": "string", "pattern": "^#[0-9A-Fa-f]{6}$" },
+    "httpsUrl": { "type": "string", "pattern": "^https://" },
+    "httpsUrlOrNull": { "oneOf": [{ "$ref": "#/$defs/httpsUrl" }, { "type": "null" }] },
+    "phoneOrNull": {
+      "oneOf": [{ "type": "string", "pattern": "^\\+[1-9][0-9 -]{6,18}$" }, { "type": "null" }],
+      "description": "E.164 with optional spaces or dashes, e.g. +972-3-000-0000."
+    }
+  }
+}

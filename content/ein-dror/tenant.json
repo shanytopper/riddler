@@ -1,0 +1,46 @@
+{
+  "schemaVersion": 1,
+  "tenantId": "7c1f0d2e-5a3b-4c8d-9e1f-2a3b4c5d6e7f",
+  "slug": "ein-dror",
+  "displayName": {
+    "he": "פארק הטבע עין דרור",
+    "en": "Ein Dror Nature Park"
+  },
+  "about": {
+    "he": "פארק טבע סביב מעיין עין דרור: שבילי הליכה, בריכת המעיין, אלון עתיק ותצפית על העמק. הפארק פתוח כל יום מ-8:00 עד השקיעה.",
+    "en": "A nature park around the Ein Dror spring: walking trails, the spring pool, an ancient oak, and a lookout over the valley. Open daily from 8:00 until sunset."
+  },
+  "countryCode": "IL",
+  "languages": ["he", "en"],
+  "defaultLanguage": "he",
+  "websiteUrl": "https://eindror.example",
+  "theme": {
+    "primary": "#1F5E3B",
+    "onPrimary": "#FFFFFF",
+    "accent": "#E0A526",
+    "onAccent": "#1A1A1A",
+    "background": "light",
+    "typography": "heebo",
+    "logoUrl": null,
+    "logoDarkUrl": null,
+    "coverUrl": null
+  },
+  "contacts": {
+    "support": {
+      "phone": "+972-3-000-0000",
+      "email": "visitors@eindror.example",
+      "url": null
+    },
+    "emergency": {
+      "phone": "+972-3-000-0001",
+      "note": {
+        "he": "מוקד הפארק פועל בשעות הפתיחה. במקרה חירום רפואי חייגו 101.",
+        "en": "The park line is staffed during opening hours. For a medical emergency dial 101."
+      }
+    }
+  },
+  "legal": {
+    "privacyUrl": "https://eindror.example/privacy",
+    "termsUrl": "https://eindror.example/terms"
+  }
+}

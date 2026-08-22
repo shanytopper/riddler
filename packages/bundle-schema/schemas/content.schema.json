@@ -1,0 +1,489 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://riddles.invalid/schemas/bundle/v1/content.schema.json",
+  "title": "Track content",
+  "description": "The content.json of a track bundle: one published track version, every language included. Authored files use the same shape; the bundle builder validates them, fills QR tokens, strips authoringNotes, and packages media and maps.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "trackId",
+    "slug",
+    "name",
+    "description",
+    "languages",
+    "defaultLanguage",
+    "difficulty",
+    "estimate",
+    "safetyNotes",
+    "rules",
+    "media",
+    "legs"
+  ],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "trackId": { "$ref": "#/$defs/uuid" },
+    "slug": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
+      "maxLength": 64,
+      "description": "Stable, URL-safe identifier used in deep links. Unique within the tenant."
+    },
+    "name": { "$ref": "#/$defs/localizedString" },
+    "description": { "$ref": "#/$defs/localizedString" },
+    "coverMediaId": {
+      "oneOf": [{ "$ref": "#/$defs/uuid" }, { "type": "null" }],
+      "description": "A media id from `media`, or null for no cover."
+    },
+    "languages": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/languageCode" },
+      "minItems": 1,
+      "uniqueItems": true,
+      "description": "Languages the track is published in. Every localized string in this file must contain each of them."
+    },
+    "defaultLanguage": { "$ref": "#/$defs/languageCode" },
+    "difficulty": { "enum": ["easy", "medium", "hard"] },
+    "minAge": { "type": "integer", "minimum": 0, "maximum": 120 },
+    "estimate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["durationMinutes", "distanceMeters"],
+      "properties": {
+        "durationMinutes": { "type": "integer", "minimum": 1 },
+        "distanceMeters": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "safetyNotes": {
+      "$ref": "#/$defs/localizedString",
+      "description": "Shown before the track starts and acknowledged with one tap."
+    },
+    "rules": { "$ref": "#/$defs/rules" },
+    "media": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/media" },
+      "description": "Every media asset referenced anywhere in the track."
+    },
+    "legs": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/leg" },
+      "description": "Ordered. Single-venue tracks have exactly one leg and the app never shows the word."
+    },
+    "authoringNotes": {
+      "type": "string",
+      "description": "Free text for the people editing the source file. Stripped by the bundle builder; never shown to visitors."
+    }
+  },
+  "$defs": {
+    "uuid": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+    },
+    "languageCode": {
+      "type": "string",
+      "pattern": "^[a-z]{2}(-[A-Z]{2})?$",
+      "description": "BCP 47 language, optionally with a region: he, en, en-GB."
+    },
+    "localizedString": {
+      "type": "object",
+      "minProperties": 1,
+      "propertyNames": { "pattern": "^[a-z]{2}(-[A-Z]{2})?$" },
+      "additionalProperties": { "type": "string", "minLength": 1 },
+      "description": "Map from language code to text. Must contain every language in `languages` (builder invariant)."
+    },
+    "localizedStringList": {
+      "type": "object",
+      "minProperties": 1,
+      "propertyNames": { "pattern": "^[a-z]{2}(-[A-Z]{2})?$" },
+      "additionalProperties": {
+        "type": "array",
+        "minItems": 1,
+        "items": { "type": "string", "minLength": 1 }
+      }
+    },
+    "contentBlock": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "text"],
+          "properties": {
+            "type": { "const": "paragraph" },
+            "text": {
+              "$ref": "#/$defs/localizedString",
+              "description": "Inline markup allowed: **bold**, _italic_, and line breaks. Nothing else."
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "mediaId"],
+          "properties": {
+            "type": { "const": "image" },
+            "mediaId": { "$ref": "#/$defs/uuid" },
+            "caption": { "$ref": "#/$defs/localizedString" }
+          }
+        }
+      ]
+    },
+    "media": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "kind", "path"],
+      "properties": {
+        "id": { "$ref": "#/$defs/uuid" },
+        "kind": { "const": "image" },
+        "path": {
+          "type": "string",
+          "pattern": "^media/[A-Za-z0-9._-]+$",
+          "description": "In an authored file: relative to the track folder. In a bundle: relative to the bundle root, rewritten by the builder to media/<id>.<ext>."
+        },
+        "alt": {
+          "$ref": "#/$defs/localizedString",
+          "description": "Accessibility text. Required by the builder for every image shown to visitors."
+        }
+      }
+    },
+    "mapTiles": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "bounds", "minZoom", "maxZoom"],
+      "properties": {
+        "kind": { "const": "tiles" },
+        "bounds": {
+          "type": "array",
+          "items": { "type": "number" },
+          "minItems": 4,
+          "maxItems": 4,
+          "description": "[west, south, east, north] in WGS 84 degrees. The offline region extracted into the bundle. Every station of the leg must lie inside it."
+        },
+        "minZoom": { "type": "integer", "minimum": 0, "maximum": 22 },
+        "maxZoom": { "type": "integer", "minimum": 0, "maximum": 22 }
+      }
+    },
+    "mapImage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "mediaId", "widthPx", "heightPx"],
+      "properties": {
+        "kind": { "const": "image" },
+        "mediaId": { "$ref": "#/$defs/uuid" },
+        "widthPx": { "type": "integer", "minimum": 1 },
+        "heightPx": { "type": "integer", "minimum": 1 }
+      },
+      "description": "An operator-uploaded map image (floor plan, illustrated map). Not georeferenced: no visitor position is drawn on it."
+    },
+    "location": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["lat", "lng"],
+      "properties": {
+        "lat": { "type": "number", "minimum": -90, "maximum": 90 },
+        "lng": { "type": "number", "minimum": -180, "maximum": 180 }
+      }
+    },
+    "imagePosition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["x", "y"],
+      "properties": {
+        "x": { "type": "number", "minimum": 0, "maximum": 1 },
+        "y": { "type": "number", "minimum": 0, "maximum": 1 }
+      },
+      "description": "Position on an image map as fractions of width and height, origin top-left."
+    },
+    "arrival": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["methods", "automatic"],
+      "properties": {
+        "methods": {
+          "type": "array",
+          "items": { "enum": ["gps", "qr"] },
+          "uniqueItems": true,
+          "description": "Automatic verification methods offered in addition to manual check-in, which is always available. Empty means manual only."
+        },
+        "automatic": {
+          "type": "boolean",
+          "description": "True: the station opens as soon as it becomes current, with no arrival step at all."
+        },
+        "radiusMeters": {
+          "type": "integer",
+          "minimum": 10,
+          "maximum": 500,
+          "default": 30,
+          "description": "Used by gps arrival. Large values are legitimate for area-scale stations on multi-region tracks."
+        },
+        "qrToken": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_-]{8,32}$",
+          "description": "Secret printed into the station's QR code and validated on the device against this value. Generated by the builder when absent."
+        }
+      },
+      "if": { "properties": { "automatic": { "const": true } }, "required": ["automatic"] },
+      "then": { "properties": { "methods": { "type": "array", "maxItems": 0 } } }
+    },
+    "hint": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["text", "cost"],
+      "properties": {
+        "text": { "$ref": "#/$defs/localizedString" },
+        "mediaId": { "$ref": "#/$defs/uuid" },
+        "cost": { "type": "integer", "minimum": 0, "maximum": 1000 }
+      }
+    },
+    "reveal": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["as"],
+      "properties": {
+        "as": {
+          "enum": ["pin", "clue", "both"],
+          "description": "How this station is presented when it becomes current in a progressive track. The first station of a leg is always presented as a pin regardless of this value. Ignored when visibility is `all`."
+        },
+        "clue": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["text"],
+          "properties": {
+            "text": { "$ref": "#/$defs/localizedString" },
+            "mediaId": { "$ref": "#/$defs/uuid" }
+          }
+        },
+        "distanceFeedback": {
+          "type": "boolean",
+          "default": false,
+          "description": "Show the straight-line distance to this station without direction while it is current. Requires `location`."
+        }
+      },
+      "if": { "properties": { "as": { "enum": ["clue", "both"] } } },
+      "then": { "required": ["clue"] }
+    },
+    "choiceOption": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "text"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9_-]{1,32}$",
+          "description": "Stable within the challenge; used in analytics."
+        },
+        "text": { "$ref": "#/$defs/localizedString" }
+      }
+    },
+    "challengeText": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "prompt", "accepted"],
+      "properties": {
+        "type": { "const": "text" },
+        "prompt": { "$ref": "#/$defs/localizedString" },
+        "accepted": {
+          "$ref": "#/$defs/localizedStringList",
+          "description": "Accepted answers per language. Compared after normalization (design.md §4.4)."
+        },
+        "closeMatch": {
+          "type": "boolean",
+          "default": true,
+          "description": "Accept small typos: edit distance 1 for normalized answers of 5–9 characters, 2 for 10 or more."
+        },
+        "placeholder": { "$ref": "#/$defs/localizedString" }
+      }
+    },
+    "challengeNumber": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "prompt", "answer", "tolerance"],
+      "properties": {
+        "type": { "const": "number" },
+        "prompt": { "$ref": "#/$defs/localizedString" },
+        "answer": { "type": "number" },
+        "tolerance": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "value"],
+          "properties": {
+            "kind": { "enum": ["absolute", "percent"] },
+            "value": { "type": "number", "minimum": 0 }
+          }
+        },
+        "unit": {
+          "$ref": "#/$defs/localizedString",
+          "description": "Shown next to the input, e.g. meters, years."
+        }
+      }
+    },
+    "challengeChoice": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "prompt", "options", "correctOptionId"],
+      "properties": {
+        "type": { "const": "choice" },
+        "prompt": { "$ref": "#/$defs/localizedString" },
+        "options": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 6,
+          "items": { "$ref": "#/$defs/choiceOption" }
+        },
+        "correctOptionId": { "type": "string" },
+        "shuffle": { "type": "boolean", "default": true }
+      }
+    },
+    "challengeMultiChoice": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "prompt", "options", "correctOptionIds"],
+      "properties": {
+        "type": { "const": "multi_choice" },
+        "prompt": { "$ref": "#/$defs/localizedString" },
+        "options": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 8,
+          "items": { "$ref": "#/$defs/choiceOption" }
+        },
+        "correctOptionIds": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "type": "string" },
+          "description": "All-or-nothing in v1."
+        },
+        "shuffle": { "type": "boolean", "default": true }
+      }
+    },
+    "challenge": {
+      "oneOf": [
+        { "$ref": "#/$defs/challengeText" },
+        { "$ref": "#/$defs/challengeNumber" },
+        { "$ref": "#/$defs/challengeChoice" },
+        { "$ref": "#/$defs/challengeMultiChoice" }
+      ]
+    },
+    "station": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "title", "arrival", "challenge", "hints", "points", "reveal"],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/uuid",
+          "description": "Minted once and kept across versions: printed QR codes and analytics depend on it."
+        },
+        "title": { "$ref": "#/$defs/localizedString" },
+        "intro": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/contentBlock" },
+          "default": [],
+          "description": "Shown after arrival, before the challenge."
+        },
+        "location": {
+          "$ref": "#/$defs/location",
+          "description": "Required on a tiles map, for gps arrival, and for distance feedback. Optional on an image map."
+        },
+        "imagePosition": {
+          "$ref": "#/$defs/imagePosition",
+          "description": "Required when the leg's map is an image."
+        },
+        "arrival": { "$ref": "#/$defs/arrival" },
+        "challenge": {
+          "oneOf": [{ "$ref": "#/$defs/challenge" }, { "type": "null" }],
+          "description": "Null makes this an info station: arriving completes it and it carries no points."
+        },
+        "hints": {
+          "type": "array",
+          "maxItems": 3,
+          "items": { "$ref": "#/$defs/hint" },
+          "description": "Revealed in order. Total cost should not exceed `points` (builder warns)."
+        },
+        "points": { "type": "integer", "minimum": 0, "maximum": 1000 },
+        "reveal": { "$ref": "#/$defs/reveal" }
+      }
+    },
+    "leg": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "map", "stations"],
+      "properties": {
+        "id": { "$ref": "#/$defs/uuid" },
+        "name": {
+          "$ref": "#/$defs/localizedString",
+          "description": "Shown only when the track has more than one leg."
+        },
+        "intro": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/contentBlock" },
+          "description": "Shown when the leg starts; on multi-leg tracks this is where transport and opening hours go."
+        },
+        "outro": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/contentBlock" },
+          "description": "Shown when the leg's last station is completed."
+        },
+        "map": {
+          "oneOf": [{ "$ref": "#/$defs/mapTiles" }, { "$ref": "#/$defs/mapImage" }]
+        },
+        "stations": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/station" }
+        }
+      }
+    },
+    "rules": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "order",
+        "visibility",
+        "revealAndContinue",
+        "wrongChoicePenaltyPercent",
+        "timeBonus",
+        "leaderboard"
+      ],
+      "properties": {
+        "order": {
+          "enum": ["linear", "free"],
+          "description": "linear: stations in sequence. free: any order; the leg completes when every station is completed."
+        },
+        "visibility": {
+          "enum": ["all", "progressive"],
+          "description": "all: every station shown from the start. progressive: a station appears only after the previous one is completed. Progressive requires linear order."
+        },
+        "revealAndContinue": {
+          "enum": ["afterFirstHint", "immediately"],
+          "description": "When the 'reveal answer and continue' option (0 points) becomes available."
+        },
+        "wrongChoicePenaltyPercent": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100,
+          "description": "Deducted from the challenge's points for each wrong answer on choice and multi_choice challenges. Text and number challenges are never penalized per attempt."
+        },
+        "timeBonus": {
+          "oneOf": [
+            { "type": "null" },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["points", "parSeconds", "cutoffSeconds"],
+              "properties": {
+                "points": { "type": "integer", "minimum": 1, "maximum": 10000 },
+                "parSeconds": { "type": "integer", "minimum": 1 },
+                "cutoffSeconds": { "type": "integer", "minimum": 2 }
+              },
+              "description": "Full bonus at or under par play time, decaying linearly to zero at cutoff. cutoffSeconds must exceed parSeconds (builder invariant)."
+            }
+          ]
+        },
+        "leaderboard": { "type": "boolean" }
+      },
+      "if": { "properties": { "visibility": { "const": "progressive" } } },
+      "then": { "properties": { "order": { "const": "linear" } } }
+    }
+  }
+}

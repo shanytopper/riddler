@@ -1,0 +1,473 @@
+{
+  "schemaVersion": 1,
+  "trackId": "3f9a2b1c-8d7e-4f60-a1b2-c3d4e5f60718",
+  "slug": "spring-trail",
+  "name": {
+    "he": "שביל המעיין",
+    "en": "The Spring Trail"
+  },
+  "description": {
+    "he": "מסלול חידות מעגלי בפארק הטבע עין דרור: שבע תחנות, כשעה של הליכה, וחידות על המעיין, העצים ובעלי החיים של העמק. מתאים למשפחות עם ילדים מגיל 8.",
+    "en": "A circular riddle trail through Ein Dror Nature Park: seven stations, about an hour of walking, and riddles about the spring, the trees, and the animals of the valley. Suited to families with children aged 8 and up."
+  },
+  "coverMediaId": null,
+  "languages": ["he", "en"],
+  "defaultLanguage": "he",
+  "difficulty": "easy",
+  "minAge": 8,
+  "estimate": {
+    "durationMinutes": 70,
+    "distanceMeters": 1750
+  },
+  "safetyNotes": {
+    "he": "הישארו על השבילים המסומנים. הבריכה עמוקה — ילדים חייבים ללכת בליווי מבוגר. קחו מים וכובע. במקרה חירום: משטרה 100, מד״א 101.",
+    "en": "Stay on the marked paths. The pool is deep — children must be accompanied by an adult. Bring water and a hat. In an emergency: police 100, ambulance 101."
+  },
+  "rules": {
+    "order": "linear",
+    "visibility": "progressive",
+    "revealAndContinue": "afterFirstHint",
+    "wrongChoicePenaltyPercent": 25,
+    "timeBonus": null,
+    "leaderboard": true
+  },
+  "media": [],
+  "legs": [
+    {
+      "id": "9b8c7d6e-5f40-4a31-b2c3-d4e5f6071829",
+      "name": {
+        "he": "שביל המעיין",
+        "en": "The Spring Trail"
+      },
+      "intro": [
+        {
+          "type": "paragraph",
+          "text": {
+            "he": "המסלול מתחיל בשער הישן ומסתיים בבריכה, הליכה קצרה מהשער שבו התחלתם. בכל תחנה מחכה לכם סיפור קצר וחידה אחת. פתרתם? תקבלו רמז למיקום התחנה הבאה.",
+            "en": "The trail starts at the Old Gate and ends at the Pool, a short walk from the gate where you began. At every station a short story and one riddle are waiting. Solve it, and you get a clue to where the next station is."
+          }
+        }
+      ],
+      "outro": [
+        {
+          "type": "paragraph",
+          "text": {
+            "he": "סיימתם את שביל המעיין! השאירו את הפארק נקי כפי שמצאתם אותו, ובואו שוב באביב — אז הסלמנדרות יוצאות.",
+            "en": "You've finished the Spring Trail! Leave the park as clean as you found it, and come back in spring — that's when the salamanders come out."
+          }
+        }
+      ],
+      "map": {
+        "kind": "tiles",
+        "bounds": [34.802, 32.095, 34.818, 32.106],
+        "minZoom": 13,
+        "maxZoom": 18
+      },
+      "stations": [
+        {
+          "id": "0a1b2c3d-4e5f-4061-8a9b-0c1d2e3f4a5b",
+          "title": {
+            "he": "השער הישן",
+            "en": "The Old Gate"
+          },
+          "intro": [
+            {
+              "type": "paragraph",
+              "text": {
+                "he": "ברוכים הבאים לפארק הטבע עין דרור. שער הברזל שלפניכם הוצב כאן בשנת 1932, כשמי המעיין השקו פרדסי הדרים בכל רחבי העמק. החקלאים עברו בו כל בוקר עם פרדות וארגזים ריקים, וכל ערב עם ארגזים מלאים.",
+                "en": "Welcome to Ein Dror Nature Park. The iron gate in front of you was put up in 1932, when the spring watered citrus orchards across the whole valley. Farmers passed through it every morning with mules and empty crates, and every evening with full ones."
+              }
+            }
+          ],
+          "location": { "lat": 32.099, "lng": 34.806 },
+          "arrival": { "methods": [], "automatic": false, "radiusMeters": 30 },
+          "challenge": {
+            "type": "number",
+            "prompt": {
+              "he": "השער הוצב בשנת 1932. כמה שנים הוא עומד כאן? (השנה עכשיו 2026.)",
+              "en": "The gate was put up in 1932. How many years has it been standing here? (The year now is 2026.)"
+            },
+            "answer": 94,
+            "tolerance": { "kind": "absolute", "value": 0 },
+            "unit": { "he": "שנים", "en": "years" }
+          },
+          "hints": [
+            {
+              "text": {
+                "he": "חסרו את שנת הצבת השער מהשנה הנוכחית.",
+                "en": "Subtract the year the gate was built from the current year."
+              },
+              "cost": 20
+            },
+            {
+              "text": {
+                "he": "2026 פחות 1932.",
+                "en": "2026 minus 1932."
+              },
+              "cost": 30
+            },
+            {
+              "text": {
+                "he": "זה תשעים ומשהו.",
+                "en": "It's ninety-something."
+              },
+              "cost": 50
+            }
+          ],
+          "points": 100,
+          "reveal": { "as": "pin", "distanceFeedback": false }
+        },
+        {
+          "id": "1b2c3d4e-5f60-4172-9bac-1d2e3f4a5b6c",
+          "title": {
+            "he": "המעיין",
+            "en": "The Spring"
+          },
+          "intro": [
+            {
+              "type": "paragraph",
+              "text": {
+                "he": "זהו עין דרור — המעיין שהעניק לפארק את שמו. מימיו קרירים כל השנה. בתחילת האביב, הסתכלו היטב ליד הסלעים הרטובים: כאן חיה הסלמנדרה, שחורה עם כתמים צהובים בוהקים. הצבעים האלה אינם קישוט — הם מזהירים טורפים שעורה רעיל.",
+                "en": "This is Ein Dror — the spring that gave the park its name. Its water stays cool all year round. In early spring, look carefully near the wet rocks: the fire salamander lives here, black with bright yellow spots. Those colors are not decoration — they warn predators that its skin is poisonous."
+              }
+            }
+          ],
+          "location": { "lat": 32.0998, "lng": 34.8082 },
+          "arrival": { "methods": [], "automatic": false, "radiusMeters": 30 },
+          "challenge": {
+            "type": "choice",
+            "prompt": {
+              "he": "מדוע הסלמנדרה צבעונית כל כך?",
+              "en": "Why is the salamander so brightly colored?"
+            },
+            "options": [
+              { "id": "mate", "text": { "he": "כדי למשוך בן זוג", "en": "To attract a mate" } },
+              { "id": "warn", "text": { "he": "כדי להזהיר טורפים שהיא רעילה", "en": "To warn predators that it is poisonous" } },
+              { "id": "blend", "text": { "he": "כדי להסתוות בין פרחים צהובים", "en": "To blend in with yellow flowers" } },
+              { "id": "sun", "text": { "he": "כדי לספוג יותר אור שמש", "en": "To absorb more sunlight" } }
+            ],
+            "correctOptionId": "warn",
+            "shuffle": true
+          },
+          "hints": [
+            {
+              "text": { "he": "זה לא קשור ליופי.", "en": "It isn't about looking pretty." },
+              "cost": 20
+            },
+            {
+              "text": { "he": "העור שלה לא בטוח לאכילה.", "en": "Its skin is not safe to eat." },
+              "cost": 30
+            },
+            {
+              "text": { "he": "צבעים בוהקים בטבע הם לעיתים קרובות אזהרה.", "en": "Bright colors in nature are often a warning." },
+              "cost": 50
+            }
+          ],
+          "points": 100,
+          "reveal": {
+            "as": "clue",
+            "clue": {
+              "text": {
+                "he": "לכו בעקבות קול המים. במקום שבו מתחיל סיפורו של העמק — שם תמצאו אותי.",
+                "en": "Follow the sound of water. Where the valley's story begins, you'll find me."
+              }
+            },
+            "distanceFeedback": true
+          }
+        },
+        {
+          "id": "2c3d4e5f-6071-4283-abcd-2e3f4a5b6c7d",
+          "title": {
+            "he": "האלון העתיק",
+            "en": "The Ancient Oak"
+          },
+          "intro": [
+            {
+              "type": "paragraph",
+              "text": {
+                "he": "אלון התבור הזה בן כ-300 שנה, לפי ההערכה. בכל סתיו הוא משיר אלפי בלוטים. רובם נאכלים — אבל העורבני, ציפור רעשנית ממשפחת העורבים עם כתם כחול על הכנף, טומן בלוטים באדמה כדי לאכול אותם מאוחר יותר, ושוכח חלק מהם. מהבלוטים שנשכחו צומחים אלונים חדשים.",
+                "en": "This Tabor oak is thought to be about 300 years old. Every autumn it drops thousands of acorns. Most are eaten — but the jay, a noisy bird of the crow family with a flash of blue on its wing, buries acorns to eat later and forgets some of them. Those forgotten acorns become new oaks."
+              }
+            }
+          ],
+          "location": { "lat": 32.101, "lng": 34.81 },
+          "arrival": { "methods": [], "automatic": false, "radiusMeters": 30 },
+          "challenge": {
+            "type": "text",
+            "prompt": {
+              "he": "איזו ציפור נוטעת אלונים חדשים כשהיא טומנת בלוטים ושוכחת אותם?",
+              "en": "Which bird plants new oaks by burying acorns and forgetting them?"
+            },
+            "accepted": {
+              "he": ["עורבני", "העורבני", "עורבנים", "העורבנים"],
+              "en": ["jay", "jays", "the jay", "a jay", "eurasian jay"]
+            },
+            "closeMatch": true,
+            "placeholder": { "he": "שם הציפור", "en": "Name of the bird" }
+          },
+          "hints": [
+            {
+              "text": { "he": "זו ציפור ממשפחת העורבים.", "en": "It's a bird from the crow family." },
+              "cost": 20
+            },
+            {
+              "text": { "he": "יש לה כתם כחול על הכנף.", "en": "It has a patch of blue on its wing." },
+              "cost": 30
+            },
+            {
+              "text": { "he": "שמה מתחיל באות ע׳.", "en": "Its name begins with J." },
+              "cost": 50
+            }
+          ],
+          "points": 100,
+          "reveal": {
+            "as": "clue",
+            "clue": {
+              "text": {
+                "he": "אני היצור החי הזקן ביותר בפארק. חפשו את הגזע הרחב ביותר ועמדו בצילי.",
+                "en": "I am the oldest living thing in the park. Look for the widest trunk, and stand in my shade."
+              }
+            },
+            "distanceFeedback": true
+          }
+        },
+        {
+          "id": "3d4e5f60-7182-4394-8cde-3f4a5b6c7d8e",
+          "title": {
+            "he": "התצפית",
+            "en": "The Lookout"
+          },
+          "intro": [
+            {
+              "type": "paragraph",
+              "text": {
+                "he": "מכאן רואים את כל העמק. הגבעות שממזרח עשויות גיר — סלע רך שמי הגשם ממיסים לאט. במשך עשרות אלפי שנים חצבו המים תעלות נסתרות בתוך הגבעות, ובמקום שבו תעלה פוגשת את פני השטח — נולד מעיין. כך נוצר עין דרור.",
+                "en": "From here you can see the whole valley. The hills to the east are made of limestone — a soft rock that rainwater slowly dissolves. Over tens of thousands of years the water carved hidden channels inside the hills, and where a channel meets the surface, a spring is born. That is how Ein Dror came to be."
+              }
+            }
+          ],
+          "location": { "lat": 32.102, "lng": 34.8125 },
+          "arrival": { "methods": [], "automatic": false, "radiusMeters": 30 },
+          "challenge": {
+            "type": "choice",
+            "prompt": {
+              "he": "מאיזה סלע עשויות הגבעות שממזרח?",
+              "en": "What rock are the eastern hills made of?"
+            },
+            "options": [
+              { "id": "granite", "text": { "he": "גרניט", "en": "Granite" } },
+              { "id": "basalt", "text": { "he": "בזלת", "en": "Basalt" } },
+              { "id": "limestone", "text": { "he": "גיר", "en": "Limestone" } },
+              { "id": "sandstone", "text": { "he": "אבן חול", "en": "Sandstone" } }
+            ],
+            "correctOptionId": "limestone",
+            "shuffle": true
+          },
+          "hints": [
+            {
+              "text": { "he": "זה סלע רך.", "en": "It's a soft rock." },
+              "cost": 20
+            },
+            {
+              "text": { "he": "מי גשם ממיסים אותו לאט.", "en": "Rainwater slowly dissolves it." },
+              "cost": 30
+            },
+            {
+              "text": { "he": "זה הסלע שבו נוצרות מערות.", "en": "It's the rock that caves form in." },
+              "cost": 50
+            }
+          ],
+          "points": 100,
+          "reveal": {
+            "as": "clue",
+            "clue": {
+              "text": {
+                "he": "טפסו עד שכל העמק ישתרע לרגליכם.",
+                "en": "Climb until the whole valley lies at your feet."
+              }
+            },
+            "distanceFeedback": true
+          }
+        },
+        {
+          "id": "4e5f6071-8293-44a5-9def-4a5b6c7d8e9f",
+          "title": {
+            "he": "מלון הדבורים",
+            "en": "The Bee Hotel"
+          },
+          "intro": [
+            {
+              "type": "paragraph",
+              "text": {
+                "he": "רוב דבורי הבר בישראל אינן חיות בכוורות ואינן מייצרות דבש. הן חיות לבד. דבורה בודדת מטילה את ביציה בגבעול חלול או בחור בעץ, אוטמת כל תא בבוץ או בעלים, ולעולם אינה פוגשת את צאצאיה. \"המלון\" הזה מעץ נותן למאות מהן מקום לקנן.",
+                "en": "Most wild bees in Israel do not live in hives and do not make honey. They live alone. A solitary bee lays her eggs in a hollow stem or a hole in wood, seals each one with mud or leaves, and never meets her young. This wooden \"hotel\" gives hundreds of them a place to nest."
+              }
+            }
+          ],
+          "location": { "lat": 32.1005, "lng": 34.814 },
+          "arrival": { "methods": [], "automatic": false, "radiusMeters": 30 },
+          "challenge": {
+            "type": "choice",
+            "prompt": {
+              "he": "היכן מטילה דבורה בודדת את ביציה?",
+              "en": "Where does a solitary bee lay her eggs?"
+            },
+            "options": [
+              { "id": "hive", "text": { "he": "בכוורת, עם אלפי דבורים אחרות", "en": "In a hive, with thousands of other bees" } },
+              { "id": "stem", "text": { "he": "בגבעול חלול או בחור בעץ", "en": "In a hollow stem or a hole in wood" } },
+              { "id": "water", "text": { "he": "מתחת למים", "en": "Under water" } },
+              { "id": "nest", "text": { "he": "בקן ציפורים נטוש", "en": "In an abandoned bird's nest" } }
+            ],
+            "correctOptionId": "stem",
+            "shuffle": true
+          },
+          "hints": [
+            {
+              "text": { "he": "היא לא חיה עם דבורים אחרות.", "en": "She doesn't live with other bees." },
+              "cost": 20
+            },
+            {
+              "text": { "he": "הסתכלו ממה עשוי המלון.", "en": "Look at what the hotel is made of." },
+              "cost": 30
+            },
+            {
+              "text": { "he": "חורים עגולים קטנים בעץ.", "en": "Small round holes in wood." },
+              "cost": 50
+            }
+          ],
+          "points": 100,
+          "reveal": {
+            "as": "clue",
+            "clue": {
+              "text": {
+                "he": "מלון בלי דלתות ובו אלף חדרים זעירים, והוא הכי עמוס בצהריים.",
+                "en": "A hotel with no doors and a thousand tiny rooms, busiest at midday."
+              }
+            },
+            "distanceFeedback": true
+          }
+        },
+        {
+          "id": "5f607182-93a4-45b6-aef0-5b6c7d8e9fa0",
+          "title": {
+            "he": "בית האריזה",
+            "en": "The Packing House"
+          },
+          "intro": [
+            {
+              "type": "paragraph",
+              "text": {
+                "he": "הקירות האלה הם כל מה שנותר מבית האריזה. תפוזים מהעמק נעטפו בנייר, נארזו בארגזי עץ של 100 תפוזים כל אחד, והובלו ברכבת לנמל. אונייה אחת יכלה לקחת 20,000 ארגזים ללונדון.",
+                "en": "These walls are all that remains of the packing house. Oranges from the valley were wrapped in paper, packed in wooden crates of 100, and carried by train to the port. A single ship could take 20,000 crates to London."
+              }
+            }
+          ],
+          "location": { "lat": 32.099, "lng": 34.812 },
+          "arrival": { "methods": [], "automatic": false, "radiusMeters": 30 },
+          "challenge": {
+            "type": "number",
+            "prompt": {
+              "he": "כמה תפוזים נשאה אונייה אחת ללונדון?",
+              "en": "How many oranges did one ship carry to London?"
+            },
+            "answer": 2000000,
+            "tolerance": { "kind": "absolute", "value": 0 },
+            "unit": { "he": "תפוזים", "en": "oranges" }
+          },
+          "hints": [
+            {
+              "text": {
+                "he": "הכפילו את מספר הארגזים במספר התפוזים בכל ארגז.",
+                "en": "Multiply the number of crates by the oranges in each crate."
+              },
+              "cost": 20
+            },
+            {
+              "text": { "he": "20,000 × 100.", "en": "20,000 × 100." },
+              "cost": 30
+            },
+            {
+              "text": { "he": "שתיים ואחריה שישה אפסים.", "en": "A two followed by six zeros." },
+              "cost": 50
+            }
+          ],
+          "points": 100,
+          "reveal": {
+            "as": "clue",
+            "clue": {
+              "text": {
+                "he": "קירות אבן בלי גג, שם חיכו פעם התפוזים לאונייה.",
+                "en": "Stone walls with no roof, where oranges once waited for the ship."
+              }
+            },
+            "distanceFeedback": true
+          }
+        },
+        {
+          "id": "60718293-a4b5-46c7-bf01-6c7d8e9fa0b1",
+          "title": {
+            "he": "הבריכה",
+            "en": "The Pool"
+          },
+          "intro": [
+            {
+              "type": "paragraph",
+              "text": {
+                "he": "מי המעיין נאספו בבריכה הזאת ונשלחו בתעלות אל הפרדסים. היום הפרדסים נעלמו, והבריכה שייכת לצפרדעים, לשפיריות ולדג כסוף קטן — לבנון הירקון — שאינו חי בשום מקום בעולם מלבד נחלי החוף של ישראל.",
+                "en": "The spring's water was gathered in this pool and sent out in channels to the orchards. Today the orchards are gone, and the pool belongs to frogs, dragonflies, and a small silver fish — the Yarkon bleak — that lives nowhere in the world except the streams of Israel's coast."
+              }
+            },
+            {
+              "type": "paragraph",
+              "text": {
+                "he": "חידה אחרונה לפני הסיום:",
+                "en": "One last riddle before you finish:"
+              }
+            }
+          ],
+          "location": { "lat": 32.0982, "lng": 34.809 },
+          "arrival": { "methods": [], "automatic": false, "radiusMeters": 30 },
+          "challenge": {
+            "type": "text",
+            "prompt": {
+              "he": "יש לי גזע, אבל אני לא עַם. יש לי שורשים, אבל אני לא זז ממקומי. יש לי ענפים, אבל אני לא עץ משפחה. מי אני?",
+              "en": "I have a crown but I am not a king. I have roots but I never move. I have leaves but I am not a book. What am I?"
+            },
+            "accepted": {
+              "he": ["עץ", "העץ", "אילן", "אלון", "עץ אלון"],
+              "en": ["tree", "a tree", "the tree", "oak", "an oak", "oak tree"]
+            },
+            "closeMatch": true,
+            "placeholder": { "he": "מי אני?", "en": "What am I?" }
+          },
+          "hints": [
+            {
+              "text": { "he": "עברתם ליד הזקן ביותר מסוגו בפארק.", "en": "You passed the oldest one in the park." },
+              "cost": 20
+            },
+            {
+              "text": { "he": "הוא משיר בלוטים בסתיו.", "en": "It drops acorns in autumn." },
+              "cost": 30
+            },
+            {
+              "text": { "he": "מתחיל באות ע׳.", "en": "It begins with T." },
+              "cost": 50
+            }
+          ],
+          "points": 100,
+          "reveal": {
+            "as": "clue",
+            "clue": {
+              "text": {
+                "he": "במקום שבו מי המעיין נחים לפני שהם ממשיכים בדרכם.",
+                "en": "Where the spring's water rests before it travels on."
+              }
+            },
+            "distanceFeedback": true
+          }
+        }
+      ]
+    }
+  ],
+  "authoringNotes": "Ein Dror Nature Park is fictional; the facts in the station intros are invented for the demo and every challenge is answerable from its own intro text. Coordinates are placeholders laid out as a ~1.7 km loop inside Park HaYarkon, Tel Aviv, at 150–300 m spacing, so the offline-map spike has a real area to extract. Before the field test: re-pin all seven stations and the leg bounds at the real venue, and consider swapping two or three challenges for observation questions about things testers can actually see there. No media yet: add a cover and one image per station under media/ and register them in `media`."
+}

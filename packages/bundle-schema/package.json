@@ -1,0 +1,41 @@
+{
+  "name": "@riddles/bundle-schema",
+  "version": "0.1.0",
+  "private": true,
+  "description": "JSON Schemas for the track bundle, generated TypeScript types, and the validator used by the bundle builder.",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./map-assets": {
+      "types": "./dist/map-assets.d.ts",
+      "default": "./dist/map-assets.js"
+    },
+    "./schemas/*": "./schemas/*"
+  },
+  "files": [
+    "dist",
+    "schemas"
+  ],
+  "bin": {
+    "riddles-validate": "./dist/cli.js"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "node --test \"src/**/*.test.ts\"",
+    "generate-types": "node scripts/generate-types.ts",
+    "validate": "node src/cli.ts"
+  },
+  "dependencies": {
+    "ajv": "^8.17.1",
+    "ajv-formats": "^3.0.1"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "json-schema-to-typescript": "^15.0.0",
+    "typescript": "^5.9.0"
+  }
+}

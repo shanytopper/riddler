@@ -1,0 +1,27 @@
+{
+  "name": "riddles",
+  "version": "0.0.0",
+  "private": true,
+  "description": "White-label, offline-first location-based riddle tracks for venue operators. See docs/design.md.",
+  "engines": {
+    "node": ">=24"
+  },
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "validate": "node packages/bundle-schema/src/cli.ts content",
+    "typecheck": "npm run build && npm run typecheck --workspaces --if-present",
+    "extract-map": "node packages/bundle-builder/src/cli.ts map-assets content/ein-dror/tracks/spring-trail/content.json --out apps/mobile/public/maps --cache .cache/map-assets",
+    "bundle": "node packages/bundle-builder/src/cli.ts build content/ein-dror/tracks/spring-trail/content.json --out apps/mobile/public/bundles --tenant 7c1f0d2e-5a3b-4c8d-9e1f-2a3b4c5d6e7f --version 1 --cache .cache/map-assets",
+    "test": "npm test --workspaces --if-present",
+    "build": "npm run build -w @riddles/bundle-schema -w @riddles/game-core -w @riddles/bundle-builder",
+    "generate": "npm run generate-types --workspaces --if-present",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "devDependencies": {
+    "prettier": "^3.6.0"
+  }
+}

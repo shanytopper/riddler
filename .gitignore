@@ -1,0 +1,35 @@
+# dependencies
+node_modules/
+
+# build output
+dist/
+*.tsbuildinfo
+coverage/
+# CMake build tree for the Android app (relocated here by apps/mobile/plugins/withShortNativeBuildDir.js)
+/.cxx/
+# tile extracts and basemap assets cached by the bundle builder
+/.cache/
+# local API data: PGlite database and object storage (apps/api)
+/apps/api/.data/
+
+# framework output (apps are added in later steps)
+.expo/
+.next/
+android/
+ios/
+
+# environment
+.env
+.env.*
+!.env.example
+
+# OS / editor
+.DS_Store
+Thumbs.db
+*.log
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# Claude Code project-local config (launch.json for the preview server)
+.claude/

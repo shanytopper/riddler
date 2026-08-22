@@ -1,0 +1,27 @@
+# Render Blueprint for the prototype environment (decision D27: Render free web service + Render
+# free Postgres; bundle archives live in Postgres so the service needs no disk). The same resources
+# can be created by hand or through Render's API; this file is the reproducible description.
+#
+# After the first deploy, publish the demo content into the hosted database from a dev machine:
+#   DATABASE_URL="<external connection string>" npm run seed -w @riddles/api
+# then point the app at the service: EXPO_PUBLIC_API_URL=https://<service>.onrender.com.
+services:
+  - type: web
+    name: riddles-api
+    runtime: node
+    plan: free
+    region: frankfurt
+    branch: main
+    # The API runs TypeScript directly on Node 24; the shared packages it imports need their dist/.
+    buildCommand: npm ci && npm run build
+    startCommand: node apps/api/src/main.ts
+    healthCheckPath: /health
+    autoDeployTrigger: commit
+    envVars:
+      - key: NODE_VERSION
+        value: "24"
+      # The free Postgres (one per workspace) is created separately — by the API or the dashboard —
+      # so a blueprint sync never tries to create a second one. Paste its INTERNAL connection string
+      # (same region, private network, no TLS); the external one also works, with TLS.
+      - key: DATABASE_URL
+        sync: false
