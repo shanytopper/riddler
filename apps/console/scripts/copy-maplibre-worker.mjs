@@ -1,8 +1,9 @@
 // maplibre-gl v6 spawns its web worker at runtime from `./maplibre-gl-worker.mjs`, resolved against
-// the main bundle's URL — i.e. /console/assets/maplibre-gl-worker.mjs. Vite bundles maplibre into the
-// app chunk but does not emit that separate worker module, so without this the request 404s into the
-// SPA fallback (served as text/html) and the map quietly falls back to main-thread rendering. Copy the
-// exact worker the installed maplibre ships next to the app bundle so it loads as a module worker.
+// the main bundle's URL — i.e. /console/assets/maplibre-gl-worker.mjs — and that worker in turn
+// imports its sibling chunk `./maplibre-gl-shared.mjs`. Vite bundles maplibre into the app chunk but
+// does not emit either of these separate runtime modules, so without them the requests 404 into the
+// SPA fallback (served as text/html), the module worker fails to load, and the map falls back to
+// main-thread rendering. Copy both files, unhashed, next to the app bundle so the worker loads.
 import { createRequire } from "node:module";
 import { copyFileSync, existsSync, mkdirSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -13,14 +14,17 @@ const here = dirname(fileURLToPath(import.meta.url));
 const outDir = join(here, "..", "dist", "assets");
 
 // Resolve through maplibre's package (workspace deps hoist to the repo root node_modules).
-const maplibreDist = dirname(require.resolve("maplibre-gl/package.json"));
-const worker = join(maplibreDist, "dist", "maplibre-gl-worker.mjs");
+const maplibreDist = join(dirname(require.resolve("maplibre-gl/package.json")), "dist");
 
-if (!existsSync(worker)) {
-  throw new Error(`maplibre worker not found at ${worker}`);
-}
+// The worker and the shared chunk it imports; the worker's import target is the literal, unhashed
+// name, so copy them verbatim. (`maplibre-gl-shared.mjs` is self-contained — no further siblings.)
+const files = ["maplibre-gl-worker.mjs", "maplibre-gl-shared.mjs"];
+
 mkdirSync(outDir, { recursive: true });
-copyFileSync(worker, join(outDir, "maplibre-gl-worker.mjs"));
-const map = `${worker}.map`;
-if (existsSync(map)) copyFileSync(map, join(outDir, "maplibre-gl-worker.mjs.map"));
-console.log("copied maplibre-gl-worker.mjs into dist/assets");
+for (const name of files) {
+  const src = join(maplibreDist, name);
+  if (!existsSync(src)) throw new Error(`maplibre runtime file not found: ${src}`);
+  copyFileSync(src, join(outDir, name));
+  if (existsSync(`${src}.map`)) copyFileSync(`${src}.map`, join(outDir, `${name}.map`));
+}
+console.log(`copied ${files.join(", ")} into dist/assets`);
