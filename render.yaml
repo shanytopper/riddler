@@ -15,12 +15,15 @@ services:
     # The API runs TypeScript directly on Node 24; the shared packages it imports need their dist/,
     # and the console SPA (served under /console) is built here too. go-pmtiles lets the console
     # publish a new bundle (D34); it is fetched into the workspace and pointed at by PMTILES_BIN.
+    # go-pmtiles is unpacked into the repo root (rootDir '.', i.e. /opt/render/project/src), which
+    # persists into the run container, so PMTILES_BIN points at it there.
     buildCommand: >-
       npm ci &&
       npm run build &&
       npm run build:console &&
       curl -sSL https://github.com/protomaps/go-pmtiles/releases/download/v1.31.2/go-pmtiles_1.31.2_Linux_x86_64.tar.gz
-      | tar -xz -C /tmp pmtiles
+      | tar -xz pmtiles &&
+      chmod +x pmtiles
     startCommand: node apps/api/src/main.ts
     healthCheckPath: /health
     autoDeployTrigger: commit
@@ -28,7 +31,7 @@ services:
       - key: NODE_VERSION
         value: "24"
       - key: PMTILES_BIN
-        value: /tmp/pmtiles
+        value: /opt/render/project/src/pmtiles
       # The free Postgres (one per workspace) is created separately — by the API or the dashboard —
       # so a blueprint sync never tries to create a second one. Paste its INTERNAL connection string
       # (same region, private network, no TLS); the external one also works, with TLS.
