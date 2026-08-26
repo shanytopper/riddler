@@ -1,5 +1,12 @@
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import {
+  copyFileSync,
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  readdirSync,
+  writeFileSync,
+} from "node:fs";
 import { dirname, join } from "node:path";
 import type { Leg } from "@riddles/bundle-schema";
 import {
@@ -49,27 +56,51 @@ export function ensureTilesExtract(leg: Leg, options: MapAssetOptions): TilesExt
   if (leg.map.kind !== "tiles") throw new Error(`leg ${leg.id} has no tiles map`);
   const { bounds, minZoom, maxZoom } = leg.map;
   const extractMaxZoom = Math.min(maxZoom, PROTOMAPS_MAX_TILE_ZOOM);
-  const key = `${leg.id}-${options.build}-${bounds.join("_")}-z${extractMaxZoom}`;
-  const target = join(options.cacheDir, "tiles", `${key}.pmtiles`);
+  // Cache by geography (bounds + zoom), not by leg or build date: the tiles for a region are the
+  // same whichever track or day asks for them, so a content-only republish reuses an existing
+  // extract instead of re-fetching the daily Protomaps build — a live call that can fail.
+  const suffix = `${bounds.join("_")}-z${extractMaxZoom}`;
+  const tilesDir = join(options.cacheDir, "tiles");
+  const target = join(tilesDir, `${suffix}.pmtiles`);
   if (!existsSync(target)) {
-    mkdirSync(dirname(target), { recursive: true });
-    const bin = findPmtiles(options.pmtilesBin);
-    const args = [
-      "extract",
-      protomapsBuildUrl(options.build),
-      target,
-      `--bbox=${bounds.join(",")}`,
-      `--maxzoom=${extractMaxZoom}`,
-    ];
-    const result = spawnSync(bin, args, { stdio: ["ignore", "ignore", "pipe"], encoding: "utf8" });
-    if (result.error) throw new Error(`could not run ${bin}: ${result.error.message}`);
-    if (result.status !== 0)
-      throw new Error(
-        `pmtiles extract failed: ${result.stderr.trim().split("\n").pop() ?? "unknown error"}`,
-      );
+    mkdirSync(tilesDir, { recursive: true });
+    // Reuse any already-extracted tiles for the same region (including files under an older cache
+    // key) so a republish never depends on the tile service being reachable.
+    const reuse = findCachedExtract(tilesDir, suffix, target);
+    if (reuse) {
+      copyFileSync(reuse, target);
+    } else {
+      const bin = findPmtiles(options.pmtilesBin);
+      const args = [
+        "extract",
+        protomapsBuildUrl(options.build),
+        target,
+        `--bbox=${bounds.join(",")}`,
+        `--maxzoom=${extractMaxZoom}`,
+      ];
+      const result = spawnSync(bin, args, {
+        stdio: ["ignore", "ignore", "pipe"],
+        encoding: "utf8",
+      });
+      if (result.error) throw new Error(`could not run ${bin}: ${result.error.message}`);
+      if (result.status !== 0)
+        throw new Error(
+          `pmtiles extract failed: ${result.stderr.trim().split("\n").pop() ?? "unknown error"}`,
+        );
+    }
   }
   const bytes = readFileSync(target).byteLength;
   return { path: target, bytes, bounds, minZoom, maxZoom };
+}
+
+/** An existing cached extract for the same region (any leg/build), so a republish can reuse it. */
+function findCachedExtract(tilesDir: string, suffix: string, target: string): string | null {
+  if (!existsSync(tilesDir)) return null;
+  for (const name of readdirSync(tilesDir)) {
+    const full = join(tilesDir, name);
+    if (full !== target && name.includes(`${suffix}.pmtiles`)) return full;
+  }
+  return null;
 }
 
 export interface BasemapAssets {

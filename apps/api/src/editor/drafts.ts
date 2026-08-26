@@ -4,7 +4,7 @@ import { hasErrors, validateDocument } from "@riddles/bundle-schema";
 import { asc, desc, eq, sql } from "drizzle-orm";
 import type { Db } from "../db/client.ts";
 import { tenants, trackDrafts, trackVersions, tracks } from "../db/schema.ts";
-import { badRequest, notFound } from "../errors.ts";
+import { ApiError, badRequest, notFound, serviceUnavailable } from "../errors.ts";
 import {
   buildFromContent,
   storePublished,
@@ -119,7 +119,18 @@ export async function publishDraft(
     );
 
   const version = (await maxVersion(db, trackId)) + 1;
-  const built = await builder({ tenant, content, version });
+  let built;
+  try {
+    built = await builder({ tenant, content, version });
+  } catch (error) {
+    if (error instanceof ApiError) throw error; // e.g. an unsupported-media badRequest
+    // Building the bundle can fail on a transient tile-service issue; surface a clear, retryable
+    // message instead of a generic 500.
+    console.error("[publish] bundle build failed:", error);
+    throw serviceUnavailable(
+      "Could not build the map for this version — the map tile service may be busy. Please try again in a moment.",
+    );
+  }
   await storePublished(db, storage, tenant, built, version);
   return { version, warnings: built.warnings };
 }

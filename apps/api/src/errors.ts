@@ -14,3 +14,4 @@ export const forbidden = (message: string): ApiError => new ApiError(403, messag
 export const notFound = (message: string): ApiError => new ApiError(404, message);
 export const conflict = (message: string): ApiError => new ApiError(409, message);
 export const tooLarge = (message: string): ApiError => new ApiError(413, message);
+export const serviceUnavailable = (message: string): ApiError => new ApiError(503, message);
