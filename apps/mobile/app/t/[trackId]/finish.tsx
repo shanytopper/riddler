@@ -9,7 +9,9 @@ import { ThemedText } from "../../../src/components/ThemedText.tsx";
 import { API_URL, delivery } from "../../../src/delivery/client.ts";
 import { useLanguage } from "../../../src/i18n/LanguageProvider.tsx";
 import { formatPlayTime } from "../../../src/i18n/strings.ts";
+import { distanceMeters } from "../../../src/map/geo.ts";
 import { usePlay } from "../../../src/play/PlayProvider.tsx";
+import { Blocks } from "../../../src/play/StationPanel.tsx";
 import { ThemeProvider, useTheme } from "../../../src/theme/index.ts";
 
 /** The result card (design.md §5.3). The leaderboard itself arrives with the API in step 7. */
@@ -61,6 +63,17 @@ function ResultCard({ tenant }: { tenant: Tenant | null }) {
   const time = formatPlayTime(finished.playTimeMs);
   const date = new Date().toLocaleDateString();
   const track = localized(bundle.content.name);
+  // The track's finish is the last leg's `end`, its meeting point the first leg's `start` (D36).
+  const lastLeg = bundle.content.legs[bundle.content.legs.length - 1];
+  const end = lastLeg?.end ?? null;
+  const endLocation = end?.location;
+  const startLocation = bundle.content.legs[0]?.start?.location;
+  // A circular route ends where it began; within a meter counts as the same spot.
+  const circular =
+    endLocation !== undefined &&
+    startLocation !== undefined &&
+    distanceMeters(startLocation, endLocation) < 1;
+  const endNote = end?.note ? localized(end.note) : "";
 
   const share = () => {
     void Share.share({
@@ -117,6 +130,19 @@ function ResultCard({ tenant }: { tenant: Tenant | null }) {
             {date}
           </ThemedText>
         </View>
+
+        <Blocks bundle={bundle} blocks={lastLeg?.outro ?? []} />
+
+        {end ? (
+          <Card>
+            <Stack gap={1}>
+              <ThemedText variant="label">
+                {t(circular ? "trailEndsAtStart" : "trailEndsHere")}
+              </ThemedText>
+              {endNote ? <ThemedText>{endNote}</ThemedText> : null}
+            </Stack>
+          </Card>
+        ) : null}
 
         {bundle.content.rules.leaderboard ? (
           <Card>

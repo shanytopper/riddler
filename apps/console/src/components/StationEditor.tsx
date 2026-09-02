@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { EditStation, Loc } from "../model.ts";
+import { RADIUS_DEFAULT, RADIUS_MAX, RADIUS_MIN, clampRadius, hasGps, setGps } from "../model.ts";
 import { ChallengeEditor } from "./ChallengeEditor.tsx";
 import { LocalizedField } from "./LocalizedField.tsx";
 import { StationMap, type ContextPin } from "./StationMap.tsx";
@@ -18,7 +19,7 @@ interface Props {
   onRemove: () => void;
 }
 
-/** Editor for a single station: title, location, intro, challenge, hints, points, and reveal. */
+/** Editor for a single station: title, location, arrival, intro, challenge, hints, points, and reveal. */
 export function StationEditor({
   station,
   index,
@@ -33,6 +34,7 @@ export function StationEditor({
   const [open, setOpen] = useState(index === 0);
   const paragraphs = (station.intro ?? []).filter((b) => b.type === "paragraph");
   const loc = station.location ?? center;
+  const radius = hasGps(station) ? (station.arrival.radiusMeters ?? RADIUS_DEFAULT) : null;
 
   return (
     <details
@@ -45,6 +47,7 @@ export function StationEditor({
         <strong>{station.title.en || station.title.he || "Untitled station"}</strong>
         <span className="pill">{station.challenge ? station.challenge.type : "info"}</span>
         <span className="pill">{station.points} pts</span>
+        {radius !== null ? <span className="pill">GPS {radius} m</span> : null}
         <div style={{ flex: 1 }} />
         <span className="list-controls" onClick={(e) => e.preventDefault()}>
           <button
@@ -113,9 +116,10 @@ export function StationEditor({
         </div>
         {open ? (
           <StationMap
-            number={index + 1}
+            label={String(index + 1)}
             location={loc}
             context={context}
+            radiusMeters={radius}
             onMove={(lat, lng) => update((s) => void (s.location = { lat, lng }))}
           />
         ) : null}
@@ -123,6 +127,9 @@ export function StationEditor({
           Drag the pin or click the map, or type coordinates above. Switch to Satellite to place it
           on the ground.
         </p>
+
+        <h2>Arrival</h2>
+        <ArrivalEditor station={station} update={update} />
 
         <div className="field">
           <label>Intro paragraphs (shown on arrival)</label>
@@ -268,6 +275,66 @@ export function StationEditor({
         <RevealEditor station={station} languages={languages} update={update} />
       </div>
     </details>
+  );
+}
+
+function ArrivalEditor({
+  station,
+  update,
+}: {
+  station: EditStation;
+  update: (fn: (station: EditStation) => void) => void;
+}) {
+  const gps = hasGps(station);
+  const radius = station.arrival.radiusMeters ?? RADIUS_DEFAULT;
+  // What the operator is typing, while the field has focus. Clamping every keystroke would turn
+  // "150" into 500 (the "1" becomes 10, then "105", then "1050"), so an out-of-range partial value
+  // stays on screen and is clamped into the model on blur; in-range values apply as typed.
+  const [draft, setDraft] = useState<string | null>(null);
+
+  return (
+    <div>
+      <label className="actions">
+        <input
+          type="checkbox"
+          checked={gps}
+          style={{ width: "auto" }}
+          onChange={(e) => update((s) => setGps(s, e.target.checked))}
+        />
+        Verify arrival by GPS
+      </label>
+      {gps ? (
+        <div className="field" style={{ maxWidth: 160, marginTop: 8 }}>
+          <label>Radius (m)</label>
+          <input
+            type="number"
+            min={RADIUS_MIN}
+            max={RADIUS_MAX}
+            step={5}
+            value={draft ?? radius}
+            onChange={(e) => {
+              setDraft(e.target.value);
+              const r = e.target.valueAsNumber;
+              if (Number.isFinite(r) && r >= RADIUS_MIN && r <= RADIUS_MAX)
+                update((s) => void (s.arrival.radiusMeters = clampRadius(r)));
+            }}
+            onBlur={(e) => {
+              setDraft(null);
+              const r = e.target.valueAsNumber;
+              // Only write a real change — a plain focus/blur must not dirty the draft or clear
+              // a validation report.
+              if (Number.isFinite(r) && clampRadius(r) !== radius)
+                update((s) => void (s.arrival.radiusMeters = clampRadius(r)));
+            }}
+          />
+        </div>
+      ) : null}
+      <p className="muted small">
+        When the party is within the radius the app offers “You've reached …”. The manual “We're
+        here” check-in stays available as a backup either way. 30 m suits a courtyard or a street
+        corner; use 100–500 m for an area-scale station.
+      </p>
+    </div>
   );
 }
 

@@ -38,6 +38,7 @@ export function summarize(content: TrackContent): TrackSummary {
     languages: [...content.languages],
     defaultLanguage: content.defaultLanguage,
     safetyNotes: content.safetyNotes,
+    start: content.legs[0]?.start,
   };
 }
 

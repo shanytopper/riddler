@@ -7,6 +7,8 @@ interface Props {
   onChange: (lang: string, text: string) => void;
   multiline?: boolean;
   placeholder?: string;
+  /** The field may be left out entirely; blank in every language is then fine, not "incomplete". */
+  optional?: boolean;
 }
 
 /** One player-facing field edited in every language side by side, with a completeness dot. */
@@ -17,8 +19,10 @@ export function LocalizedField({
   onChange,
   multiline,
   placeholder,
+  optional,
 }: Props) {
-  const complete = isComplete(value, languages);
+  const blank = languages.every((l) => (value?.[l] ?? "").trim().length === 0);
+  const complete = (optional && blank) || isComplete(value, languages);
   return (
     <div className="field">
       <label>

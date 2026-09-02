@@ -130,7 +130,7 @@ GPS details that decide whether this feels reliable: the app treats a fix as usa
 
 A session in which the party used `manual` at a station that offered `gps` or `qr` is flagged in analytics. It is not penalized and not marked publicly in v1.
 
-Prototype: `manual` only. v1: all four.
+Prototype: `manual` always, plus `gps` per station where the operator turns it on (D37, pulled forward from v1 at the customer's request; the console sets the method and radius, and draws the radius on the station map). v1: all four.
 
 ### 4.4 Challenges and answers (D5)
 
@@ -199,19 +199,19 @@ A synchronized event mode — many parties starting together, with a lobby, a co
 
 ### 5.2 Starting a track
 
-Track details → language choice (Hebrew or English; defaults to the device language) → team name (suggestions offered; a light profanity filter applies because names may appear on the leaderboard) → bundle download, with size shown before starting ("42 MB — Wi-Fi recommended") and a progress bar → safety notes written by the operator, acknowledged with one tap → location permission requested here if not already granted, with the reason stated → start.
+Track details (with a **Meeting point** card when the track sets an explicit start, D36 — the note is shown before the download so a visitor at the entrance knows where to go) → language choice (Hebrew or English; defaults to the device language) → team name (suggestions offered; a light profanity filter applies because names may appear on the leaderboard) → bundle download, with size shown before starting ("42 MB — Wi-Fi recommended") and a progress bar → safety notes written by the operator, acknowledged with one tap → location permission requested here if not already granted, with the reason stated → start.
 
 If the download fails or the device is offline, the screen says so plainly and offers retry; nothing else is available until the bundle is complete. This is the one moment the product needs connectivity, and the venue-entry QR poster tells visitors to start the track at the entrance.
 
 ### 5.3 Playing
 
-**Map screen** — the base map (standard tiles or the operator's custom image, §5.8) with the party's position (standard maps only), the current station highlighted, completed stations checked, upcoming stations shown or hidden per visibility, and locked stations greyed in Model B. A bar shows progress ("3 / 8"), the score, and distance and bearing to the current station when the station is shown as a pin. Buttons: "We are here", "Scan station code" (when any station in the track uses `qr`), and a menu (pause or leave track, language, help, emergency, about).
+**Map screen** — the base map (standard tiles or the operator's custom image, §5.8) with the party's position (standard maps only), the current station highlighted, completed stations checked, upcoming stations shown or hidden per visibility, locked stations greyed in Model B, and — when the leg sets them (D36) — a distinct **Start** ring while nothing is completed yet and a **Finish** ring once the last station is in view (one "Start & finish" ring when they coincide). A bar shows progress ("3 / 8"), the score, and distance and bearing to the current station when the station is shown as a pin. Buttons: "We are here", "Scan station code" (when any station in the track uses `qr`), and a menu (pause or leave track, language, help, emergency, about).
 
 **Clue screen** (Model A) — the clue text and image for the next station, the optional distance-only feedback, and the same "We are here" and scan buttons.
 
 **Station screen** — title; intro content; the challenge with its type-specific input; submit. Correct: a brief celebration, points earned, "Next". Wrong: a gentle message and the input stays focused. A hints drawer shows each hint's cost before revealing. "Reveal answer and continue" appears per §4.5. After the station, the reveal of the next station plays (pin drops on the map or the clue appears).
 
-**Finish** — the result card: team name, track, score, play time, date, operator branding; "Post to leaderboard" (opt-in); "Share result" (OS share sheet, an image of the card). The leaderboard view loads when online and says "Your result will be posted when you're back online" otherwise.
+**Finish** — the result card: team name, track, score, play time, date, operator branding; the leg's closing text (`outro`) and, when the leg sets an explicit end (D36), a "The trail ends here" card with its note — or "The trail ends where it began" for a circular route; "Post to leaderboard" (opt-in); "Share result" (OS share sheet, an image of the card). The leaderboard view loads when online and says "Your result will be posted when you're back online" otherwise.
 
 ### 5.4 Between legs
 
@@ -308,7 +308,7 @@ Localized text is stored as a map from language code to string (`{"he": "...", "
 | **TenantUser** | tenant, email, role (`admin` / `editor`) |
 | **Track** | tenant, draft content, published version pointer, status, leaderboard on/off, created/updated |
 | **TrackVersion** | track, version number, immutable content snapshot (the same JSON that ships in the bundle), bundle reference, published at |
-| **Leg** (in content) | id, name*, intro*, outro*, map kind (`tiles` / `image`), region or image asset, stations in order |
+| **Leg** (in content) | id, name*, intro*, outro*, map kind (`tiles` / `image`), region or image asset, optional start and end points (location and a one-line note*; unset means the first/last station, D36), stations in order |
 | **Station** (in content) | id (stable across versions), title*, intro content*, coordinates (optional when image map), image position (optional), arrival methods, radius, challenge, hints, points, reveal — how this station is presented when it becomes current (`pin` / `clue` / `both`), clue text* and image, distance feedback on/off, QR token |
 | **Challenge** (in station) | type (`text` / `number` / `choice` / `multi_choice`), type-specific fields; for `text`: accepted answers per language, close-match flag; for `number`: value and tolerance; for choice types: options* and correct set, shuffle flag |
 | **Hint** (in station) | text*, image (optional), cost |
@@ -423,12 +423,12 @@ Purpose: demonstrate the visitor experience in a real, small venue under a ficti
 | Platform | Android only (D33). iOS is brought up at the start of v1, before any v1 feature |
 | Track | One track, one leg, 6–8 stations, Hebrew and English |
 | Mode | Model A: `linear`, `progressive`, `clue` (D13); distance-only feedback on |
-| Arrival | `manual` only (D11). GPS is still read for the party's position on the map and for distance-only feedback; it is not used to verify arrival |
+| Arrival | `manual` always (D11) plus `gps` per station where the operator enables it (D37): the app asks for location with a rationale, shows the distance, and offers "You've reached …" within the radius; manual check-in stays as the backup |
 | Challenges | `text`, `number`, `choice`; hints; reveal-and-continue; scoring per §4.6 |
 | Map | Standard tiles, offline region in the bundle; no custom image map |
 | Offline | Full bundle download; crash-safe local state; event sync; result card; leaderboard when online |
 | Players | Anonymous only; no accounts |
-| Console | **Not built.** Content is authored as JSON and published with a script |
+| Console | Editor v0 (D34): the operator signs in, creates tracks, edits stations with their location on a map, sets GPS arrival and start/end points, validates, publishes, and moderates the leaderboard |
 | Analytics | Events stored; no dashboard |
 
 Backend pieces the prototype needs from §11.2: the bundle builder (run as a command-line tool over the JSON content), the delivery API, and the ingestion API including leaderboard derivation. Not built for the prototype: the content API, analytics rollups, print jobs, platform admin.

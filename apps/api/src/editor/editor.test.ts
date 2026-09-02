@@ -411,6 +411,80 @@ test("the map region follows the stations, so a track can be placed anywhere", a
   assert.equal(report.ok, true); // no "outside the leg's map bounds" error
 });
 
+test("a station with gps arrival saves and validates", async () => {
+  const { app, content } = await harness();
+  const cookie = await login(app);
+
+  // gps is an automatic method on top of manual check-in (D6/D11); it only needs the station's location.
+  const draft = structuredClone(content);
+  draft.legs[0]!.stations[0]!.arrival = { methods: ["gps"], automatic: false, radiusMeters: 30 };
+  const put = await app.inject({
+    method: "PUT",
+    url: `/console-api/tracks/${content.trackId}`,
+    headers: { cookie },
+    payload: { content: draft },
+  });
+  assert.equal(put.statusCode, 200);
+
+  const report = (
+    await app.inject({
+      method: "POST",
+      url: `/console-api/tracks/${content.trackId}/validate`,
+      headers: { cookie },
+    })
+  ).json();
+  assert.equal(report.ok, true);
+  assert.deepEqual(report.errors, []);
+});
+
+test("a start point outside the stations' box grows the map region, and the track still validates", async () => {
+  const { app, content } = await harness();
+  const cookie = await login(app);
+  type Bounds = [number, number, number, number];
+  const boundsOf = (c: TrackContent) => (c.legs[0]!.map as { bounds: Bounds }).bounds;
+  const contains = ([west, south, east, north]: Bounds, p: { lat: number; lng: number }) =>
+    west < p.lng && p.lng < east && south < p.lat && p.lat < north;
+
+  // The seed's start is at the first station; move the meeting point well north-west of every station.
+  const meeting = { lat: 32.13, lng: 34.78 };
+  const before = (
+    await app.inject({ url: `/console-api/tracks/${content.trackId}`, headers: { cookie } })
+  ).json().content as TrackContent;
+  assert.equal(contains(boundsOf(before), meeting), false);
+
+  const draft = structuredClone(before);
+  draft.legs[0]!.start = {
+    location: meeting,
+    note: { he: "נפגשים בחניון", en: "Meet at the car park" },
+  };
+  const put = await app.inject({
+    method: "PUT",
+    url: `/console-api/tracks/${content.trackId}`,
+    headers: { cookie },
+    payload: { content: draft },
+  });
+  assert.equal(put.statusCode, 200);
+
+  // The saved region grew to contain the start point without dropping any station, and the track
+  // still validates: no "outside the leg's map bounds" error.
+  const saved = (
+    await app.inject({ url: `/console-api/tracks/${content.trackId}`, headers: { cookie } })
+  ).json().content as TrackContent;
+  assert.deepEqual(saved.legs[0]!.start?.location, meeting);
+  assert.equal(contains(boundsOf(saved), meeting), true);
+  for (const station of saved.legs[0]!.stations) {
+    assert.equal(contains(boundsOf(saved), station.location!), true);
+  }
+  const report = (
+    await app.inject({
+      method: "POST",
+      url: `/console-api/tracks/${content.trackId}/validate`,
+      headers: { cookie },
+    })
+  ).json();
+  assert.equal(report.ok, true);
+});
+
 test("badRequest carries a 400 (sanity for the shared error helper)", () => {
   assert.equal(badRequest("x").status, 400);
 });

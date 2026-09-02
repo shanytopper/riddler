@@ -13,6 +13,18 @@ export interface StationMarker {
   state: StationMarkerState;
 }
 
+/**
+ * A leg's start or end point (D36): drawn as a labeled ring, never pressable. Not a station — a
+ * waypoint has no arrival, no events and no points.
+ */
+export interface Waypoint {
+  kind: "start" | "end";
+  lng: number;
+  lat: number;
+  /** "Start" / "Finish" in the UI language. */
+  label: string;
+}
+
 export interface Position {
   lng: number;
   lat: number;
@@ -34,6 +46,7 @@ export interface TrackMapProps {
   minZoom: number;
   maxZoom: number;
   stations: StationMarker[];
+  waypoints?: Waypoint[];
   position: Position | null;
   source: MapSource;
   onStationPress?: (stationId: string) => void;

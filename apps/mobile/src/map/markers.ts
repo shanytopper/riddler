@@ -1,5 +1,5 @@
 import type { ThemeColors } from "../theme/tokens.ts";
-import type { Position, StationMarker } from "./types.ts";
+import type { Position, StationMarker, Waypoint } from "./types.ts";
 
 /** Minimal GeoJSON shapes, so neither platform's map types leak into shared code. */
 export interface PointFeature<P> {
@@ -18,11 +18,19 @@ export interface StationProperties {
   state: StationMarker["state"];
 }
 
+export interface WaypointProperties {
+  kind: Waypoint["kind"];
+  label: string;
+}
+
 export const STATIONS_SOURCE_ID = "stations";
+export const WAYPOINTS_SOURCE_ID = "waypoints";
 export const POSITION_SOURCE_ID = "position";
 export const LAYER_IDS = {
   stationCircle: "stations-circle",
   stationLabel: "stations-label",
+  waypointRing: "waypoints-ring",
+  waypointLabel: "waypoints-label",
   positionHalo: "position-halo",
   positionDot: "position-dot",
 } as const;
@@ -37,6 +45,17 @@ export function stationsToGeoJSON(stations: StationMarker[]): PointCollection<St
         geometry: { type: "Point", coordinates: [station.lng, station.lat] },
         properties: { id: station.id, label: station.label, state: station.state },
       })),
+  };
+}
+
+export function waypointsToGeoJSON(waypoints: Waypoint[]): PointCollection<WaypointProperties> {
+  return {
+    type: "FeatureCollection",
+    features: waypoints.map((waypoint) => ({
+      type: "Feature",
+      geometry: { type: "Point", coordinates: [waypoint.lng, waypoint.lat] },
+      properties: { kind: waypoint.kind, label: waypoint.label },
+    })),
   };
 }
 
@@ -103,3 +122,12 @@ export function stationLabelColor(colors: ThemeColors): Expression {
 }
 
 export const STATION_LABEL_FONT = ["Noto Sans Medium"];
+
+/**
+ * Start/finish markers (D36) must not read as stations: a hollow ring in the theme's primary color
+ * with its name written underneath, against the stations' filled, numbered discs.
+ */
+export const WAYPOINT_RING_RADIUS = 9;
+export const WAYPOINT_RING_WIDTH = 3;
+/** Ems from the ring's center; with a top anchor the label sits just under the ring. */
+export const WAYPOINT_LABEL_OFFSET: [number, number] = [0, 1.1];

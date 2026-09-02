@@ -157,7 +157,7 @@
           "items": { "type": "number" },
           "minItems": 4,
           "maxItems": 4,
-          "description": "[west, south, east, north] in WGS 84 degrees. The offline region extracted into the bundle. Every station of the leg must lie inside it."
+          "description": "[west, south, east, north] in WGS 84 degrees. The offline region extracted into the bundle. Every station and waypoint of the leg must lie inside it."
         },
         "minZoom": { "type": "integer", "minimum": 0, "maximum": 22 },
         "maxZoom": { "type": "integer", "minimum": 0, "maximum": 22 }
@@ -193,6 +193,24 @@
         "y": { "type": "number", "minimum": 0, "maximum": 1 }
       },
       "description": "Position on an image map as fractions of width and height, origin top-left."
+    },
+    "waypoint": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "location": {
+          "$ref": "#/$defs/location",
+          "description": "Required on a tiles map, inside the leg's bounds. Optional on an image map."
+        },
+        "imagePosition": {
+          "$ref": "#/$defs/imagePosition",
+          "description": "Required when the leg's map is an image."
+        },
+        "note": {
+          "$ref": "#/$defs/localizedString"
+        }
+      },
+      "description": "A point on the leg that is not a station: shown on the map with its `note` (e.g. where exactly to meet), with no arrival step and no events. The note is optional; when present it must contain every language (builder invariant)."
     },
     "arrival": {
       "type": "object",
@@ -431,6 +449,15 @@
           "type": "array",
           "minItems": 1,
           "items": { "$ref": "#/$defs/station" }
+        },
+        "start": {
+          "$comment": "allOf rather than a described $ref, so the type generator emits one Waypoint type for start and end instead of a copy per use.",
+          "allOf": [{ "$ref": "#/$defs/waypoint" }],
+          "description": "Where the party meets before the first station. When absent the first station is the meeting point."
+        },
+        "end": {
+          "allOf": [{ "$ref": "#/$defs/waypoint" }],
+          "description": "Where the leg ends after the last station. When absent the last station is the finish. May equal start for a circular route."
         }
       }
     },

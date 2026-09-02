@@ -24,6 +24,7 @@ export type GameRuleCode =
   | "not_arrived"
   | "already_completed"
   | "out_of_order"
+  | "method_not_offered"
   | "no_more_hints"
   | "reveal_not_allowed"
   | "no_next_leg";
@@ -252,6 +253,9 @@ export function arrive(
   const expected = nextStation(content, state);
   if (expected && expected.id !== stationId)
     throw new GameRuleError("out_of_order", "stations are visited in order");
+  // Manual check-in is always available (design.md §4.3, D6); the others only where the station lists them.
+  if (method !== "manual" && !station.arrival.methods.includes(method))
+    throw new GameRuleError("method_not_offered", `this station does not offer ${method} arrival`);
   return arriveEmission(content, state, station, method, ctx).events;
 }
 

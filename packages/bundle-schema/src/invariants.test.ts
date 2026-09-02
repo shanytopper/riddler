@@ -10,6 +10,17 @@ test("the minimal content has no errors or warnings", () => {
   assert.deepEqual(contentInvariants(minimalContent()), { errors: [], warnings: [] });
 });
 
+test("start and end points inside the bounds, with complete notes, are clean", () => {
+  const content = minimalContent();
+  content.legs[0].start = {
+    location: { lat: 32.1, lng: 34.81 },
+    note: L("נפגשים בשער", "Meet at the gate"),
+  };
+  content.legs[0].end = { location: { lat: 32.1, lng: 34.81 } }; // circular: back to the start
+  assert.deepEqual(contentInvariants(content), { errors: [], warnings: [] });
+  assert.deepEqual(schemaIssues("content", content), []);
+});
+
 test("1. every localized string needs every track language", () => {
   const content = minimalContent();
   content.legs[0].stations[1]!.title = { he: "רק עברית" };
@@ -36,6 +47,19 @@ test("1. defaultLanguage must be one of languages", () => {
   const content = minimalContent();
   content.defaultLanguage = "ar";
   assert.deepEqual(paths(contentInvariants(content).errors), ["/defaultLanguage"]);
+});
+
+test("1. a start or end note, when present, needs every track language", () => {
+  const content = minimalContent();
+  content.legs[0].start = { location: { lat: 32.1, lng: 34.81 }, note: { he: "נפגשים בשער" } };
+  content.legs[0].end = {
+    location: { lat: 32.102, lng: 34.812 },
+    note: { en: "Ends at the pool" },
+  };
+  const { errors } = contentInvariants(content);
+  assert.deepEqual(paths(errors), ["/legs/0/start/note", "/legs/0/end/note"]);
+  assert.match(errors[0]!.message, /missing language: en/);
+  assert.match(errors[1]!.message, /missing language: he/);
 });
 
 test("2. station ids are unique across the track", () => {
@@ -105,6 +129,29 @@ test("4. stations on an image map need an image position", () => {
   content.legs[0].map = { kind: "image", mediaId: MEDIA_A, widthPx: 2000, heightPx: 1500 };
   content.legs[0].stations[0].imagePosition = { x: 0.1, y: 0.1 };
   assert.deepEqual(paths(contentInvariants(content).errors), ["/legs/0/stations/1/imagePosition"]);
+});
+
+test("4. a start point on a tiles map needs a location inside the bounds", () => {
+  const content = minimalContent();
+  content.legs[0].start = { location: { lat: 31.0, lng: 34.81 }, note: L("שער", "Gate") };
+  const outside = contentInvariants(content).errors;
+  assert.deepEqual(paths(outside), ["/legs/0/start/location"]);
+  assert.match(outside[0]!.message, /outside/);
+
+  content.legs[0].start = { note: L("שער", "Gate") };
+  const missing = contentInvariants(content).errors;
+  assert.deepEqual(paths(missing), ["/legs/0/start/location"]);
+  assert.match(missing[0]!.message, /required on a tiles map/);
+});
+
+test("4. start and end points on an image map need an image position", () => {
+  const content = minimalContent();
+  content.media = [{ id: MEDIA_A, kind: "image", path: "media/plan.png" }];
+  content.legs[0].map = { kind: "image", mediaId: MEDIA_A, widthPx: 2000, heightPx: 1500 };
+  content.legs[0].stations.forEach((s) => (s.imagePosition = { x: 0.5, y: 0.5 }));
+  content.legs[0].start = { imagePosition: { x: 0.1, y: 0.1 } };
+  content.legs[0].end = { location: { lat: 32.1, lng: 34.81 } }; // a location alone is not enough
+  assert.deepEqual(paths(contentInvariants(content).errors), ["/legs/0/end/imagePosition"]);
 });
 
 test("5. gps arrival needs a location", () => {

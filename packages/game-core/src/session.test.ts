@@ -57,6 +57,7 @@ test("visibility 'all' reveals every station up front; in free order there is no
 
 test("a full play-through: wrong answer, hint, right answer, penalty, info station, finish", () => {
   const content = smallTrack();
+  content.legs[0].stations[1]!.arrival.methods = ["gps"];
   const ctx = testContext();
   let state = deriveState(startSession(content, START, ctx));
 
@@ -151,6 +152,24 @@ test("hints run out, answers need arrival, and order is enforced in linear track
     (e: unknown) => e instanceof GameRuleError && e.code === "no_more_hints",
   );
   assert.deepEqual(arrive(content, state, S1, "manual", ctx), []); // arriving twice is a no-op
+});
+
+test("an arrival method must be one the station offers; manual always is", () => {
+  const content = smallTrack();
+  content.legs[0].stations[1]!.arrival.methods = ["gps"];
+  const ctx = testContext();
+  let state = deriveState(startSession(content, START, ctx));
+  const notOffered = (e: unknown) => e instanceof GameRuleError && e.code === "method_not_offered";
+  assert.throws(() => arrive(content, state, S1, "gps", ctx), notOffered); // S1 is manual-only
+  assert.throws(() => arrive(content, state, S1, "qr", ctx), notOffered);
+  state = run(state, arrive(content, state, S1, "manual", ctx));
+  state = run(state, submitAnswer(content, state, S1, { kind: "text", text: "yes" }, ctx).events);
+  assert.throws(() => arrive(content, state, S2, "qr", ctx), notOffered);
+  const gps = arrive(content, state, S2, "gps", ctx);
+  assert.equal(gps[0]?.type === "station_arrived" && gps[0].method, "gps");
+  // Manual is never removed by configuration (D6), even where gps is offered.
+  state = run(state, arrive(content, state, S2, "manual", ctx));
+  assert.equal(stationState(state, S2).status, "arrived");
 });
 
 test("free order completes when every station is done, whatever the order", () => {

@@ -18,6 +18,7 @@ export type {
   Rules,
   Station,
   TrackContent,
+  Waypoint,
 } from "./generated/content.ts";
 export type { BundleManifest, ImageArtifact, TilesArtifact } from "./generated/manifest.ts";
 export type { Tenant } from "./generated/tenant.ts";

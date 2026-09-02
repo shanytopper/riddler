@@ -70,6 +70,8 @@ function TrackDetails({ tenant, track }: { tenant: Tenant; track: TrackSummary }
     restored &&
     session?.bundle.trackId === track.trackId &&
     (session.state.status === "active" || session.state.status === "paused");
+  // The meeting point (D36) is text only before the download: no map and no location ask yet (§5.2).
+  const meetingNote = track.start?.note ? localized(track.start.note) : "";
   return (
     <Screen flush>
       <View style={{ backgroundColor: colors.primary, paddingHorizontal: space(2) }}>
@@ -111,6 +113,15 @@ function TrackDetails({ tenant, track }: { tenant: Tenant; track: TrackSummary }
             ))}
           </ChipRow>
         </Stack>
+
+        {meetingNote ? (
+          <Card>
+            <Stack gap={1}>
+              <ThemedText variant="label">{t("meetingPoint")}</ThemedText>
+              <ThemedText>{meetingNote}</ThemedText>
+            </Stack>
+          </Card>
+        ) : null}
 
         <Card>
           <Stack gap={1}>

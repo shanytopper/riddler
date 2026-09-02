@@ -1,5 +1,5 @@
 import type { TrackContent } from "@riddles/bundle-schema";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Pressable, Share, View } from "react-native";
 import springTrail from "../../../../content/ein-dror/tracks/spring-trail/content.json";
 import { Button } from "../../src/components/Button.tsx";
@@ -19,7 +19,11 @@ const content = springTrail as unknown as TrackContent;
 export default function PinCaptureRoute() {
   const { colors, radius, space } = useTheme();
   const { t, localized } = useLanguage();
-  const { position } = usePosition(true);
+  const { position, permission, checked, request } = usePosition(true);
+  // A dev screen has no rationale card: prompt straight away, as it did before the play screen got one.
+  useEffect(() => {
+    if (checked && permission === "undetermined") void request();
+  }, [checked, permission, request]);
   const leg = content.legs[0];
   const [pins, setPins] = useState<Record<string, { lat: number; lng: number }>>(() =>
     Object.fromEntries(

@@ -40,6 +40,15 @@ test("automatic arrival excludes verification methods", () => {
   );
 });
 
+test("leg start and end points are optional, and carry no station fields", () => {
+  const content = minimalContent();
+  content.legs[0].start = { location: { lat: 32.1, lng: 34.81 }, note: { he: "שער", en: "Gate" } };
+  content.legs[0].end = { location: { lat: 32.1, lng: 34.81 } };
+  assert.deepEqual(schemaIssues("content", content), []);
+  (content.legs[0].end as { arrival?: unknown }).arrival = { methods: [], automatic: false };
+  assert.ok(schemaIssues("content", content).some((issue) => issue.path === "/legs/0/end"));
+});
+
 test("more than three hints are rejected", () => {
   const content = minimalContent();
   const hint = { text: { he: "רמז", en: "Hint" }, cost: 10 };

@@ -4,6 +4,7 @@ import type {
   Hint,
   Station,
   TrackContent,
+  Waypoint,
 } from "./generated/content.ts";
 import type { Tenant } from "./generated/tenant.ts";
 import { MIN_TEXT_CONTRAST, contrastRatio } from "./contrast.ts";
@@ -27,6 +28,8 @@ export const BUNDLE_MAX_BYTES = 100 * MB;
 
 type Localized = Record<string, string | readonly string[] | undefined>;
 type LocalizedVisitor = (path: string, value: Localized) => void;
+/** Anything placed on a leg's map: a station, or the leg's start/end waypoint. */
+type Placed = Pick<Waypoint, "location" | "imagePosition">;
 
 const hintsOf = (station: Station): readonly Hint[] => station.hints;
 const optionsOf = (challenge: { options: readonly ChoiceOption[] }): readonly ChoiceOption[] =>
@@ -56,6 +59,7 @@ export function visitLocalized(content: TrackContent, visit: LocalizedVisitor): 
     if (leg.name) visit(`${lp}/name`, leg.name);
     visitBlocks(leg.intro, `${lp}/intro`, visit);
     visitBlocks(leg.outro, `${lp}/outro`, visit);
+    if (leg.start?.note) visit(`${lp}/start/note`, leg.start.note);
     leg.stations.forEach((station, si) => {
       const sp = `${lp}/stations/${si}`;
       visit(`${sp}/title`, station.title);
@@ -81,6 +85,7 @@ export function visitLocalized(content: TrackContent, visit: LocalizedVisitor): 
           break;
       }
     });
+    if (leg.end?.note) visit(`${lp}/end/note`, leg.end.note);
   });
 }
 
@@ -162,6 +167,24 @@ export function contentInvariants(
       );
     }
 
+    // 4. Placement on the leg's map — the same rule for a station and for the start/end waypoints.
+    const checkPlacement = (base: string, point: Placed): void => {
+      if (map.kind === "tiles") {
+        if (!point.location) {
+          error(`${base}/location`, "required on a tiles map");
+        } else {
+          const [west, south, east, north] = map.bounds;
+          const { lat, lng } = point.location;
+          if (lng < west || lng > east || lat < south || lat > north) {
+            error(`${base}/location`, `outside the leg's map bounds [${map.bounds.join(", ")}]`);
+          }
+        }
+      } else if (!point.imagePosition) {
+        error(`${base}/imagePosition`, "required on an image map");
+      }
+    };
+    if (leg.start) checkPlacement(`${lp}/start`, leg.start);
+
     leg.stations.forEach((station, si) => {
       const sp = `${lp}/stations/${si}`;
 
@@ -177,19 +200,7 @@ export function contentInvariants(
         if (hint.mediaId) requireMedia(`${sp}/hints/${hi}/mediaId`, hint.mediaId, true);
       });
 
-      if (map.kind === "tiles") {
-        if (!station.location) {
-          error(`${sp}/location`, "required on a tiles map");
-        } else {
-          const [west, south, east, north] = map.bounds;
-          const { lat, lng } = station.location;
-          if (lng < west || lng > east || lat < south || lat > north) {
-            error(`${sp}/location`, `outside the leg's map bounds [${map.bounds.join(", ")}]`);
-          }
-        }
-      } else if (!station.imagePosition) {
-        error(`${sp}/imagePosition`, "required on an image map");
-      }
+      checkPlacement(sp, station);
 
       const needsLocation = station.arrival.methods.includes("gps")
         ? "gps arrival"
@@ -230,6 +241,7 @@ export function contentInvariants(
         );
       }
     });
+    if (leg.end) checkPlacement(`${lp}/end`, leg.end);
   });
 
   // 7. Time bonus

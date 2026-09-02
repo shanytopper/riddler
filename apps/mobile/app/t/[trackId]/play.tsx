@@ -2,17 +2,19 @@ import type { Station } from "@riddles/bundle-schema";
 import { nextStation, stationState } from "@riddles/game-core";
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
-import { Alert, Pressable, ScrollView, View } from "react-native";
+import { Alert, Linking, Pressable, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { bundleMapSource } from "../../../src/bundles/bundleStore.ts";
 import { Button } from "../../../src/components/Button.tsx";
+import { Card } from "../../../src/components/Card.tsx";
 import { ThemedText } from "../../../src/components/ThemedText.tsx";
 import { delivery } from "../../../src/delivery/client.ts";
 import { useLanguage } from "../../../src/i18n/LanguageProvider.tsx";
 import { usePosition } from "../../../src/location/usePosition.ts";
 // No extension: Metro picks TrackMap.web.tsx on web and TrackMap.tsx on native only for extensionless imports.
 import { TrackMap } from "../../../src/map/TrackMap";
-import type { StationMarker } from "../../../src/map/types.ts";
+import { distanceMeters } from "../../../src/map/geo.ts";
+import type { StationMarker, Waypoint } from "../../../src/map/types.ts";
 import { usePlay } from "../../../src/play/PlayProvider.tsx";
 import { StationPanel, answerText } from "../../../src/play/StationPanel.tsx";
 import { ThemeProvider, useTheme } from "../../../src/theme/index.ts";
@@ -79,7 +81,8 @@ function PlayScreen() {
   const { bundle, state } = session;
   const content = bundle.content;
   const leg = content.legs[state.legIndex] ?? content.legs[content.legs.length - 1]!;
-  const { position } = usePosition(true);
+  const { position, permission, canAskAgain, checked, request } = usePosition(true);
+  const [locationDeferred, setLocationDeferred] = useState(false);
   const [celebration, setCelebration] = useState<{
     stationId: string;
     points: number;
@@ -93,6 +96,13 @@ function PlayScreen() {
       leg.stations.find((station) => stationState(state, station.id).status === "arrived") ?? null
     );
   }, [content, state, leg]);
+
+  // The location ask comes with the clue that needs it (design.md §4.3, §5.7), never before, and
+  // play goes on without it: manual check-in is always there (D6, D11).
+  const wantsLocation =
+    current !== null &&
+    stationState(state, current.id).status === "revealed" &&
+    (current.arrival.methods.includes("gps") || current.reveal.distanceFeedback === true);
 
   const markers = useMemo<StationMarker[]>(
     () =>
@@ -125,6 +135,25 @@ function PlayScreen() {
     (station) => stationState(state, station.id).status === "completed",
   ).length;
   const { language } = useLanguage();
+
+  // Start and finish rings (D36): the start until the first station is done, the finish once the
+  // last station is in sight — under "all" visibility that is from the beginning.
+  const waypoints = useMemo<Waypoint[]>(() => {
+    const last = leg.stations[leg.stations.length - 1];
+    const showEnd =
+      content.rules.visibility === "all" ||
+      (last !== undefined && stationState(state, last.id).status !== "hidden");
+    const start = done === 0 ? (leg.start?.location ?? null) : null;
+    const end = showEnd ? (leg.end?.location ?? null) : null;
+    // A circular route's two rings would sit on top of each other: draw one, labeled for both.
+    if (start && end && distanceMeters(start, end) < 1)
+      return [{ kind: "end", lng: end.lng, lat: end.lat, label: t("waypointStartFinish") }];
+    const result: Waypoint[] = [];
+    if (start)
+      result.push({ kind: "start", lng: start.lng, lat: start.lat, label: t("waypointStart") });
+    if (end) result.push({ kind: "end", lng: end.lng, lat: end.lat, label: t("waypointFinish") });
+    return result;
+  }, [leg, state, content.rules.visibility, done, t]);
 
   const confirmLeave = () => {
     Alert.alert(t("leaveTrack"), t("leaveConfirm"), [
@@ -174,6 +203,7 @@ function PlayScreen() {
           minZoom={leg.map.kind === "tiles" ? leg.map.minZoom : 13}
           maxZoom={leg.map.kind === "tiles" ? leg.map.maxZoom : 18}
           stations={markers}
+          waypoints={waypoints}
           position={position}
           source={mapSource}
         />
@@ -207,6 +237,49 @@ function PlayScreen() {
             <Button label={t("next")} variant="accent" onPress={() => setCelebration(null)} />
           </View>
         ) : null}
+        {/* Ask (or ask again) while the OS still allows a prompt: a first Android "Deny" leaves
+            permission denied with canAskAgain true, so the card must come back rather than dead-end. */}
+        {wantsLocation &&
+        !celebration &&
+        checked &&
+        (permission === "undetermined" || (permission === "denied" && canAskAgain)) &&
+        !locationDeferred ? (
+          <Card style={{ gap: space(1.5), marginBottom: space(2) }}>
+            <ThemedText>{t("locationRationale")}</ThemedText>
+            <View style={{ flexDirection: "row", gap: space(1) }}>
+              <Button
+                label={t("allowLocation")}
+                style={{ flex: 1 }}
+                onPress={() => void request()}
+              />
+              <Button
+                label={t("notNow")}
+                variant="ghost"
+                style={{ flex: 1 }}
+                onPress={() => setLocationDeferred(true)}
+              />
+            </View>
+          </Card>
+        ) : null}
+        {wantsLocation && !celebration && permission === "denied" && !canAskAgain ? (
+          <View
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              gap: space(1),
+              marginBottom: space(2),
+            }}
+          >
+            <ThemedText tone="muted" style={{ flex: 1 }}>
+              {t("locationOff")}
+            </ThemedText>
+            <Button
+              label={t("openSettings")}
+              variant="ghost"
+              onPress={() => void Linking.openSettings()}
+            />
+          </View>
+        ) : null}
         {current && !celebration ? (
           <StationPanel
             bundle={bundle}
@@ -214,7 +287,9 @@ function PlayScreen() {
             state={state}
             station={current}
             stationNumber={leg.stations.indexOf(current) + 1}
+            startNote={leg.start?.note ? localized(leg.start.note) : null}
             position={position}
+            permission={permission}
             onArrive={(method) => play.arrive(current.id, method)}
             onRevealHint={() => play.revealHint(current.id)}
             onSubmit={(input) => {

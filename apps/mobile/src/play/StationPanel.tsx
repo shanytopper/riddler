@@ -1,7 +1,7 @@
 import type { Challenge, ContentBlock, Station, TrackContent } from "@riddles/bundle-schema";
 import type { AnswerInput, SessionState } from "@riddles/game-core";
 import { canRevealAndContinue, stationState } from "@riddles/game-core";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Image, View } from "react-native";
 import { bundleMediaUri, type InstalledBundle } from "../bundles/bundleStore.ts";
 import { Button } from "../components/Button.tsx";
@@ -9,7 +9,9 @@ import { Card } from "../components/Card.tsx";
 import { ThemedText } from "../components/ThemedText.tsx";
 import { useLanguage } from "../i18n/LanguageProvider.tsx";
 import { formatDistance } from "../i18n/strings.ts";
-import { distanceMeters } from "../map/geo.ts";
+import { FIX_WAIT_MS, checkArrival } from "../location/arrival.ts";
+import type { PermissionState } from "../location/usePosition.ts";
+import { roundDistance } from "../map/geo.ts";
 import type { Position } from "../map/types.ts";
 import { useTheme } from "../theme/index.ts";
 import { ChallengeInput } from "./ChallengeInput.tsx";
@@ -20,7 +22,10 @@ export interface StationPanelProps {
   state: SessionState;
   station: Station;
   stationNumber: number;
+  /** The leg's start note (D36), shown as "Start here: …" with the first station's clue. */
+  startNote?: string | null;
   position: Position | null;
+  permission: PermissionState;
   onArrive: (method: "manual" | "gps") => void;
   onRevealHint: () => void;
   onSubmit: (input: AnswerInput) => { correct: boolean };
@@ -35,18 +40,52 @@ export function StationPanel(props: StationPanelProps) {
   return null;
 }
 
-function CluePanel({ station, stationNumber, position, onArrive }: StationPanelProps) {
+function CluePanel({
+  station,
+  stationNumber,
+  startNote,
+  position,
+  permission,
+  onArrive,
+}: StationPanelProps) {
   const { space } = useTheme();
   const { t, language, localized } = useLanguage();
   const showClue = station.reveal.as === "clue" || station.reveal.as === "both";
-  const distance = position && station.location ? distanceMeters(position, station.location) : null;
-  const withinRadius =
-    distance !== null &&
-    station.arrival.methods.includes("gps") &&
-    distance <= (station.arrival.radiusMeters ?? 30) &&
-    (position?.accuracy ?? Infinity) <= Math.max(station.arrival.radiusMeters ?? 30, 50);
+  const gps = station.arrival.methods.includes("gps");
+  const check = checkArrival(station, position);
+  const accuracy = position?.accuracy ?? null;
+
+  // Design.md §4.3: 30 s without a usable fix and the manual button gets its explanation. The wait
+  // measures a running fix attempt, so it only counts while location is granted (not while the
+  // rationale or the OS prompt is up), and starts over when the station changes, when permission
+  // is granted, or when a usable fix arrives and is later lost.
+  const [fixOverdue, setFixOverdue] = useState(false);
+  useEffect(() => {
+    setFixOverdue(false);
+    if (permission !== "granted" || check.usable) return;
+    const timer = setTimeout(() => setFixOverdue(true), FIX_WAIT_MS);
+    return () => clearTimeout(timer);
+  }, [station.id, permission, check.usable]);
+
+  // One line under the manual button, only where gps was offered and is not delivering.
+  const explanation =
+    !gps || check.within
+      ? null
+      : permission === "denied"
+        ? t("locationOffCheckIn")
+        : permission === "granted" && fixOverdue
+          ? accuracy !== null
+            ? t("poorAccuracyCheckIn", { n: Math.round(accuracy) })
+            : t("noFixCheckIn")
+          : null;
+
   return (
     <View style={{ gap: space(2) }}>
+      {stationNumber === 1 && startNote ? (
+        <Card>
+          <ThemedText>{t("startHere", { note: startNote })}</ThemedText>
+        </Card>
+      ) : null}
       <ThemedText variant="label" tone="muted">
         {t("stationNumber", { n: stationNumber })}
       </ThemedText>
@@ -55,12 +94,21 @@ function CluePanel({ station, stationNumber, position, onArrive }: StationPanelP
       ) : (
         <ThemedText variant="heading">{t("headToPin")}</ThemedText>
       )}
-      {station.reveal.distanceFeedback && distance !== null ? (
-        <ThemedText tone="muted">
-          {t("distanceAway", { distance: formatDistance(language, distance) })}
-        </ThemedText>
+      {(gps || station.reveal.distanceFeedback) && check.distance !== null ? (
+        <View style={{ gap: space(0.5) }}>
+          <ThemedText tone="muted">
+            {t("distanceAway", {
+              distance: formatDistance(language, roundDistance(check.distance)),
+            })}
+          </ThemedText>
+          {!check.usable && accuracy !== null ? (
+            <ThemedText variant="caption" tone="muted">
+              {t("gpsAccuracy", { n: Math.round(accuracy) })}
+            </ThemedText>
+          ) : null}
+        </View>
       ) : null}
-      {withinRadius ? (
+      {check.within ? (
         <Button
           label={t("youveReached", { station: localized(station.title) })}
           variant="accent"
@@ -69,9 +117,14 @@ function CluePanel({ station, stationNumber, position, onArrive }: StationPanelP
       ) : null}
       <Button
         label={t("weAreHere")}
-        variant={withinRadius ? "secondary" : "primary"}
+        variant={check.within ? "secondary" : "primary"}
         onPress={() => onArrive("manual")}
       />
+      {explanation ? (
+        <ThemedText variant="caption" tone="muted" center>
+          {explanation}
+        </ThemedText>
+      ) : null}
     </View>
   );
 }
@@ -180,7 +233,11 @@ function ArrivedPanel(props: StationPanelProps) {
   );
 }
 
-function Blocks({ bundle, blocks }: { bundle: InstalledBundle; blocks: ContentBlock[] }) {
+/**
+ * Content blocks from the bundle (paragraphs, images): a station's intro, and the leg's outro on
+ * the finish screen.
+ */
+export function Blocks({ bundle, blocks }: { bundle: InstalledBundle; blocks: ContentBlock[] }) {
   const { radius, space } = useTheme();
   const { localized } = useLanguage();
   if (blocks.length === 0) return null;

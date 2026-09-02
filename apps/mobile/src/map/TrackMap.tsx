@@ -9,12 +9,17 @@ import {
   POSITION_SOURCE_ID,
   STATIONS_SOURCE_ID,
   STATION_LABEL_FONT,
+  WAYPOINTS_SOURCE_ID,
+  WAYPOINT_LABEL_OFFSET,
+  WAYPOINT_RING_RADIUS,
+  WAYPOINT_RING_WIDTH,
   positionToGeoJSON,
   stationCircleColor,
   stationCircleRadius,
   stationLabelColor,
   stationStrokeColor,
   stationsToGeoJSON,
+  waypointsToGeoJSON,
 } from "./markers.ts";
 import { buildMapStyle } from "./style.ts";
 import type { TrackMapProps } from "./types.ts";
@@ -30,6 +35,7 @@ export function TrackMap(props: TrackMapProps) {
     minZoom,
     maxZoom,
     stations,
+    waypoints,
     position,
     source,
     onStationPress,
@@ -46,6 +52,7 @@ export function TrackMap(props: TrackMapProps) {
     [source.tilesUrl, source.glyphsUrl, source.spriteUrl, scheme, language],
   );
   const stationData = useMemo(() => stationsToGeoJSON(stations), [stations]);
+  const waypointData = useMemo(() => waypointsToGeoJSON(waypoints ?? []), [waypoints]);
   const positionData = useMemo(() => positionToGeoJSON(position), [position]);
 
   return (
@@ -69,6 +76,37 @@ export function TrackMap(props: TrackMapProps) {
           minZoom={minZoom}
           maxZoom={maxZoom}
         />
+        {/* Beneath the position dot and the stations: at the start, the party still sees itself. */}
+        <GeoJSONSource id={WAYPOINTS_SOURCE_ID} data={waypointData}>
+          <Layer
+            id={LAYER_IDS.waypointRing}
+            type="circle"
+            paint={{
+              "circle-radius": WAYPOINT_RING_RADIUS,
+              "circle-color": colors.background,
+              "circle-opacity": 0.9,
+              "circle-stroke-width": WAYPOINT_RING_WIDTH,
+              "circle-stroke-color": colors.primary,
+            }}
+          />
+          <Layer
+            id={LAYER_IDS.waypointLabel}
+            type="symbol"
+            layout={{
+              "text-field": ["get", "label"],
+              "text-font": STATION_LABEL_FONT,
+              "text-size": 12,
+              "text-anchor": "top",
+              "text-offset": WAYPOINT_LABEL_OFFSET,
+              "text-allow-overlap": true,
+            }}
+            paint={{
+              "text-color": colors.primary,
+              "text-halo-color": colors.background,
+              "text-halo-width": 1.5,
+            }}
+          />
+        </GeoJSONSource>
         <GeoJSONSource id={POSITION_SOURCE_ID} data={positionData}>
           <Layer
             id={LAYER_IDS.positionHalo}

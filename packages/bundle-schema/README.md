@@ -37,7 +37,7 @@ report.errors; // invariant errors — the builder refuses to publish
 report.warnings; // invariant warnings
 ```
 
-Types: `TrackContent`, `Leg`, `Station`, `Challenge`, `Tenant`, `BundleManifest`, and the rest of `src/generated/`. Regenerate after a schema change with `npm run generate-types`; the generated files are committed.
+Types: `TrackContent`, `Leg`, `Station`, `Waypoint`, `Challenge`, `Tenant`, `BundleManifest`, and the rest of `src/generated/`. Regenerate after a schema change with `npm run generate-types`; the generated files are committed.
 
 Tests: `npm test` (Node's built-in runner; TypeScript runs directly on Node 24, no build).
 
@@ -62,6 +62,7 @@ Where settings live, because it is not obvious:
 
 - **`reveal` is on the station being revealed**, not on the one before it. It answers "how does this station appear when it becomes current": as a map pin, as a clue, or both. The first station of a leg is always a pin whatever its `reveal` says. Under `visibility: all` the field is ignored.
 - **`arrival.methods` lists automatic methods only** (`gps`, `qr`). Manual check-in is always offered and is not configurable. `arrival.automatic: true` skips arrival entirely (the original design's `none`).
+- **A leg's `start` and `end` are waypoints, not stations.** `start` is where the party meets before the first station, `end` where the leg finishes after the last one; when either is absent the first or last station plays the part. They are informational — shown on the map with their optional `note`, no arrival step, no events — and placed like a station: `location` inside the bounds on a tiles map, `imagePosition` on an image map. A circular route gives `end` the same location as `start`.
 - **`accepted` answers are per language.** The Hebrew and English answer sets of the same text challenge are independent.
 - **A challenge with no hints** makes "reveal and continue" available immediately, whatever `rules.revealAndContinue` says; otherwise a party could be stuck.
 
@@ -74,7 +75,7 @@ Errors:
 1. Every localized string and answer list contains every language in `languages`; `defaultLanguage` is one of `languages`.
 2. Station ids are unique across the track; option ids are unique within a challenge; `correctOptionId` / `correctOptionIds` refer to existing options.
 3. Media ids are unique; every referenced media id exists in `media`; every media path exists on disk; every image shown to visitors (cover, content blocks, clue and hint images — not map images) has `alt`.
-4. On a `tiles` map every station has a `location` inside the leg's `bounds`. On an `image` map every station has an `imagePosition`.
+4. On a `tiles` map every station, and the leg's `start` and `end` when present, has a `location` inside the leg's `bounds`. On an `image` map each has an `imagePosition`.
 5. `gps` in `arrival.methods` and `reveal.distanceFeedback: true` both require `location`.
 6. A station with `challenge: null` has `points: 0` and no hints.
 7. `timeBonus.cutoffSeconds > timeBonus.parSeconds`.

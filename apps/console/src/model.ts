@@ -1,4 +1,4 @@
-import type { Challenge, Station, TrackContent } from "@riddles/bundle-schema";
+import type { Challenge, Station, TrackContent, Waypoint } from "@riddles/bundle-schema";
 
 /** A localized string as the editor treats it — every language optional while editing. */
 export type Loc = Record<string, string | undefined>;
@@ -52,15 +52,55 @@ export interface EditReveal {
   clue?: { text: Loc };
   distanceFeedback?: boolean;
 }
+export type EditArrivalMethod = "gps" | "qr";
+export interface EditArrival {
+  methods: EditArrivalMethod[];
+  automatic: boolean;
+  radiusMeters?: number;
+  qrToken?: string;
+}
 export interface EditStation {
   id: string;
   title: Loc;
   intro?: Array<{ type: string; text?: Loc; caption?: Loc; mediaId?: string }>;
+  arrival: EditArrival;
   challenge: EditChallenge | null;
   hints: EditHint[];
   points: number;
   reveal: EditReveal;
   location?: { lat: number; lng: number };
+}
+/** A leg's start or finish point: a pin with an optional one-line note, no arrival step. */
+export interface EditWaypoint {
+  location?: { lat: number; lng: number };
+  note?: Loc;
+}
+
+/** The schema's bounds for `arrival.radiusMeters` (an integer number of metres). */
+export const RADIUS_MIN = 10;
+export const RADIUS_MAX = 500;
+export const RADIUS_DEFAULT = 30;
+
+/** Round and clamp a radius into the schema's range, so a typed value can never fail the save. */
+export const clampRadius = (n: number): number =>
+  Math.min(RADIUS_MAX, Math.max(RADIUS_MIN, Math.round(n)));
+
+export const hasGps = (station: EditStation): boolean => station.arrival.methods.includes("gps");
+
+/**
+ * Turn gps arrival on or off. On means the party verifies its arrival, so it clears `automatic`
+ * (the schema forbids both) and gives the radius its default if it was never set. The manual
+ * check-in is always available either way (D6/D11), so off simply drops the method.
+ */
+export function setGps(station: EditStation, on: boolean): void {
+  const { arrival } = station;
+  if (on) {
+    if (!arrival.methods.includes("gps")) arrival.methods.push("gps");
+    arrival.automatic = false;
+    arrival.radiusMeters ??= RADIUS_DEFAULT;
+  } else {
+    arrival.methods = arrival.methods.filter((m) => m !== "gps");
+  }
 }
 
 export const languageName = (code: string): string =>
@@ -92,6 +132,14 @@ export function blankStation(location: { lat: number; lng: number }): Station {
     reveal: { as: "pin" },
     location,
   } satisfies Station;
+}
+
+/**
+ * A fresh start or finish point at `location`. It has no note: the note is optional, so an operator
+ * who wants none has nothing to fill in. Same tiles-map assumption as `blankStation`.
+ */
+export function blankWaypoint(location: { lat: number; lng: number }): Waypoint {
+  return { location } satisfies Waypoint;
 }
 
 /** A fresh, valid-shape challenge of the given type, for switching a station's challenge kind. */

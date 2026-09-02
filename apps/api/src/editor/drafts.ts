@@ -39,15 +39,17 @@ const BOUNDS_MARGIN = 0.005;
 const round5 = (v: number): number => Math.round(v * 1e5) / 1e5;
 
 /**
- * Sizes each tiles leg's map region to its stations: their bounding box, padded, snapped outward to a
- * coarse grid. Bounds are derived from where the stations are, never hand-set, so a track can be
- * anywhere in the world and always passes the "station inside the map" rule; snapping keeps the
- * region — and so the cached tile extract — stable across small pin adjustments.
+ * Sizes each tiles leg's map region to its stations and its start/end points: their bounding box,
+ * padded, snapped outward to a coarse grid. Bounds are derived from where the points are, never
+ * hand-set, so a track can be anywhere in the world and always passes the "inside the map" rule;
+ * snapping keeps the region — and so the cached tile extract — stable across small pin adjustments.
  */
 export function fitLegBoundsToStations(content: TrackContent): TrackContent {
   for (const leg of content.legs) {
     if (leg.map.kind !== "tiles") continue;
-    const points = leg.stations.flatMap((s) => (s.location ? [s.location] : []));
+    const points = [leg.start, ...leg.stations, leg.end].flatMap((p) =>
+      p?.location ? [p.location] : [],
+    );
     if (points.length === 0) continue;
     const down = (v: number) => Math.floor((v - BOUNDS_MARGIN) / BOUNDS_GRID) * BOUNDS_GRID;
     const up = (v: number) => Math.ceil((v + BOUNDS_MARGIN) / BOUNDS_GRID) * BOUNDS_GRID;

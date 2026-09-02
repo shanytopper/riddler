@@ -63,6 +63,13 @@
         "minZoom": 13,
         "maxZoom": 18
       },
+      "start": {
+        "location": { "lat": 32.0988, "lng": 34.8058 },
+        "note": {
+          "he": "נפגשים ליד השער הישן בכניסה לפארק.",
+          "en": "Meet by the old gate at the park entrance."
+        }
+      },
       "stations": [
         {
           "id": "0a1b2c3d-4e5f-4061-8a9b-0c1d2e3f4a5b",
@@ -466,8 +473,15 @@
             "distanceFeedback": true
           }
         }
-      ]
+      ],
+      "end": {
+        "location": { "lat": 32.098, "lng": 34.8093 },
+        "note": {
+          "he": "המסלול מסתיים בבריכה, הליכה קצרה חזרה לשער.",
+          "en": "The trail ends at the Pool, a short walk back to the gate."
+        }
+      }
     }
   ],
-  "authoringNotes": "Ein Dror Nature Park is fictional; the facts in the station intros are invented for the demo and every challenge is answerable from its own intro text. Coordinates are placeholders laid out as a ~1.7 km loop inside Park HaYarkon, Tel Aviv, at 150–300 m spacing, so the offline-map spike has a real area to extract. Before the field test: re-pin all seven stations and the leg bounds at the real venue, and consider swapping two or three challenges for observation questions about things testers can actually see there. No media yet: add a cover and one image per station under media/ and register them in `media`."
+  "authoringNotes": "Ein Dror Nature Park is fictional; the facts in the station intros are invented for the demo and every challenge is answerable from its own intro text. Coordinates are placeholders laid out as a ~1.7 km loop inside Park HaYarkon, Tel Aviv, at 150–300 m spacing, so the offline-map spike has a real area to extract. Before the field test: re-pin all seven stations, the start and end points, and the leg bounds at the real venue, and consider swapping two or three challenges for observation questions about things testers can actually see there. No media yet: add a cover and one image per station under media/ and register them in `media`."
 }

@@ -6,6 +6,7 @@ import { LocalizedField } from "../components/LocalizedField.tsx";
 import { Leaderboard } from "../components/Leaderboard.tsx";
 import { StationEditor } from "../components/StationEditor.tsx";
 import type { ContextPin } from "../components/StationMap.tsx";
+import { WaypointEditor } from "../components/WaypointEditor.tsx";
 import type { EditStation, Loc } from "../model.ts";
 import { blankStation, stationsOf } from "../model.ts";
 
@@ -20,15 +21,34 @@ function legCenter(content: TrackContent): { lat: number; lng: number } {
 type Tab = "details" | "stations" | "leaderboard";
 type Status = { kind: "ok" | "err" | "warn"; text: string } | null;
 
-/** The other stations, as faint context pins for one station's map. */
-function contextPins(content: TrackContent, exceptIndex: number): ContextPin[] {
-  return (content.legs[0]?.stations ?? []).flatMap((station, i) => {
-    const loc = (station as unknown as EditStation).location;
-    return i === exceptIndex || !loc
-      ? []
-      : [{ id: station.id, number: i + 1, lat: loc.lat, lng: loc.lng }];
-  });
+/** The ids the start and finish points use as context pins (station ids are uuids, so no clash). */
+const START_PIN = "start";
+const END_PIN = "end";
+
+/**
+ * Every placed point of the leg but `except` (a station id, START_PIN, or END_PIN), as faint
+ * context pins for that point's map: the stations by number, the start as "S", the finish as "F".
+ */
+function contextPins(content: TrackContent, except: string): ContextPin[] {
+  const leg = content.legs[0];
+  if (!leg) return [];
+  const pins: ContextPin[] = [];
+  const add = (id: string, label: string, loc: { lat: number; lng: number } | undefined) => {
+    if (id !== except && loc) pins.push({ id, label, lat: loc.lat, lng: loc.lng });
+  };
+  add(START_PIN, "S", leg.start?.location);
+  leg.stations.forEach((station, i) =>
+    add(station.id, String(i + 1), (station as unknown as EditStation).location),
+  );
+  add(END_PIN, "F", leg.end?.location);
+  return pins;
 }
+
+/** True when both points are placed on the same spot — how a circular route is stored. */
+const samePlace = (
+  a: { lat: number; lng: number } | undefined,
+  b: { lat: number; lng: number } | undefined,
+): boolean => !!a && !!b && a.lat === b.lat && a.lng === b.lng;
 
 export function TrackEditor() {
   const { id = "" } = useParams();
@@ -38,11 +58,17 @@ export function TrackEditor() {
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState<Status>(null);
   const [report, setReport] = useState<ValidationReport | null>(null);
+  // "Same as start" on the finish point: the finish copies the start's location and follows it.
+  // Editor-only — the content just stores two equal locations (a circular route).
+  const [finishFollowsStart, setFinishFollowsStart] = useState(false);
 
   useEffect(() => {
     void api
       .track(id)
-      .then(setContent)
+      .then((c) => {
+        setContent(c);
+        setFinishFollowsStart(samePlace(c.legs[0]?.start?.location, c.legs[0]?.end?.location));
+      })
       .catch(() => setStatus({ kind: "err", text: "Could not load this track." }));
   }, [id]);
 
@@ -123,6 +149,12 @@ export function TrackEditor() {
 
   const languages = content.languages;
   const stations = stationsOf(content);
+  const leg = content.legs[0];
+  // Where a newly switched-on start/finish lands: on the first/last station, so it is in bounds.
+  const center = legCenter(content);
+  const firstLoc = (stations[0] as unknown as EditStation | undefined)?.location ?? center;
+  const lastLoc =
+    (stations[stations.length - 1] as unknown as EditStation | undefined)?.location ?? center;
 
   return (
     <div className="wrap wide">
@@ -148,6 +180,24 @@ export function TrackEditor() {
 
       {tab === "stations" ? (
         <div>
+          <WaypointEditor
+            kind="start"
+            waypoint={leg?.start}
+            defaultLocation={firstLoc}
+            context={contextPins(content, START_PIN)}
+            languages={languages}
+            onChange={(w) => {
+              if (!w) setFinishFollowsStart(false);
+              patch((next) => {
+                const l = next.legs[0];
+                if (!l) return;
+                if (w) l.start = w;
+                else delete l.start;
+                // A finish that mirrors the start moves with it (a copy, so later edits stay apart).
+                if (finishFollowsStart && w?.location && l.end) l.end.location = { ...w.location };
+              });
+            }}
+          />
           {stations.map((station, index) => (
             <StationEditor
               key={station.id}
@@ -155,7 +205,7 @@ export function TrackEditor() {
               index={index}
               count={stations.length}
               languages={languages}
-              context={contextPins(content, index)}
+              context={contextPins(content, station.id)}
               center={legCenter(content)}
               update={(fn) =>
                 patch((next) => {
@@ -211,6 +261,35 @@ export function TrackEditor() {
               location.
             </span>
           </div>
+          <WaypointEditor
+            kind="end"
+            waypoint={leg?.end}
+            defaultLocation={lastLoc}
+            context={contextPins(content, END_PIN)}
+            languages={languages}
+            onChange={(w) => {
+              if (!w) setFinishFollowsStart(false);
+              patch((next) => {
+                const l = next.legs[0];
+                if (!l) return;
+                if (w) l.end = w;
+                else delete l.end;
+              });
+            }}
+            sameAsStart={{
+              available: leg?.start?.location !== undefined,
+              checked: finishFollowsStart,
+              onToggle: (checked) => {
+                setFinishFollowsStart(checked);
+                if (checked)
+                  patch((next) => {
+                    const l = next.legs[0];
+                    const at = l?.start?.location;
+                    if (l?.end && at) l.end.location = { ...at };
+                  });
+              },
+            }}
+          />
         </div>
       ) : null}
 

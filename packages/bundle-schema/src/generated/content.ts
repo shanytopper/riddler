@@ -130,6 +130,14 @@ export interface Leg {
    * @minItems 1
    */
   stations: [Station, ...Station[]];
+  /**
+   * Where the party meets before the first station. When absent the first station is the meeting point.
+   */
+  start?: Waypoint;
+  /**
+   * Where the leg ends after the last station. When absent the last station is the finish. May equal start for a circular route.
+   */
+  end?: Waypoint;
 }
 /**
  * Map from language code to text. Must contain every language in `languages` (builder invariant).
@@ -146,7 +154,7 @@ export interface LocalizedString4 {
 export interface MapTiles {
   kind: "tiles";
   /**
-   * [west, south, east, north] in WGS 84 degrees. The offline region extracted into the bundle. Every station of the leg must lie inside it.
+   * [west, south, east, north] in WGS 84 degrees. The offline region extracted into the bundle. Every station and waypoint of the leg must lie inside it.
    *
    * @minItems 4
    * @maxItems 4
@@ -338,4 +346,26 @@ export interface Reveal {
    * Show the straight-line distance to this station without direction while it is current. Requires `location`.
    */
   distanceFeedback?: boolean;
+}
+/**
+ * A point on the leg that is not a station: shown on the map with its `note` (e.g. where exactly to meet), with no arrival step and no events. The note is optional; when present it must contain every language (builder invariant).
+ */
+export interface Waypoint {
+  location?: Location1;
+  imagePosition?: ImagePosition1;
+  note?: LocalizedString;
+}
+/**
+ * Required on a tiles map, inside the leg's bounds. Optional on an image map.
+ */
+export interface Location1 {
+  lat: number;
+  lng: number;
+}
+/**
+ * Required when the leg's map is an image.
+ */
+export interface ImagePosition1 {
+  x: number;
+  y: number;
 }

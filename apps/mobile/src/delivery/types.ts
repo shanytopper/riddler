@@ -20,6 +20,12 @@ export interface TrackSummary {
   languages: string[];
   defaultLanguage: string;
   safetyNotes: LocalizedString;
+  /**
+   * Where the party meets — the first leg's `start` (D36) — absent when the first station is the
+   * meeting point. The details screen shows the note before the download; the map marker comes
+   * with the bundle.
+   */
+  start?: { location?: { lat: number; lng: number }; note?: LocalizedString };
 }
 
 export interface VenueSummary {

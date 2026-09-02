@@ -38,7 +38,11 @@ export default function MapSpikeRoute() {
   const [currentIndex, setCurrentIndex] = useState(0);
   // Diagnostic: swap only fonts and sprites to the public host while tiles stay local.
   const [remoteAssets, setRemoteAssets] = useState(false);
-  const { position, permission, error: positionError } = usePosition(true);
+  const { position, permission, checked, request, error: positionError } = usePosition(true);
+  // A spike screen has no rationale card: prompt straight away, as it did before the play screen got one.
+  useEffect(() => {
+    if (checked && permission === "undetermined") void request();
+  }, [checked, permission, request]);
 
   const effectiveSource = useMemo(() => {
     if (!resolved || !remoteAssets) return resolved?.source ?? null;

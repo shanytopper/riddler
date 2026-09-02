@@ -11,12 +11,17 @@ import {
   POSITION_SOURCE_ID,
   STATIONS_SOURCE_ID,
   STATION_LABEL_FONT,
+  WAYPOINTS_SOURCE_ID,
+  WAYPOINT_LABEL_OFFSET,
+  WAYPOINT_RING_RADIUS,
+  WAYPOINT_RING_WIDTH,
   positionToGeoJSON,
   stationCircleColor,
   stationCircleRadius,
   stationLabelColor,
   stationStrokeColor,
   stationsToGeoJSON,
+  waypointsToGeoJSON,
 } from "./markers.ts";
 import { buildMapStyle } from "./style.ts";
 import type { TrackMapProps } from "./types.ts";
@@ -29,6 +34,14 @@ function configureMapLibre(): void {
   maplibregl.setWorkerUrl("/vendor/maplibre/maplibre-gl-worker.js");
   const protocol = new Protocol();
   maplibregl.addProtocol("pmtiles", protocol.tile);
+  // MapLibre GL JS needs this plugin to shape Hebrew/Arabic labels (the Start/Finish captions);
+  // without it they render mirrored. Loaded lazily, only when RTL text first appears. The web map
+  // is a development/preview target, so a CDN load is acceptable here; the native binding shapes
+  // RTL itself.
+  void maplibregl.setRTLTextPlugin(
+    "https://unpkg.com/@mapbox/mapbox-gl-rtl-text@0.2.3/mapbox-gl-rtl-text.js",
+    true,
+  );
   configured = true;
 }
 
@@ -42,6 +55,7 @@ export function TrackMap(props: TrackMapProps) {
     minZoom,
     maxZoom,
     stations,
+    waypoints,
     position,
     source,
     onStationPress,
@@ -75,7 +89,42 @@ export function TrackMap(props: TrackMapProps) {
 
     map.on("load", () => {
       map.addSource(STATIONS_SOURCE_ID, { type: "geojson", data: stationsToGeoJSON(stations) });
+      map.addSource(WAYPOINTS_SOURCE_ID, {
+        type: "geojson",
+        data: waypointsToGeoJSON(waypoints ?? []),
+      });
       map.addSource(POSITION_SOURCE_ID, { type: "geojson", data: positionToGeoJSON(position) });
+      // Beneath the position dot and the stations: at the start, the party still sees itself.
+      map.addLayer({
+        id: LAYER_IDS.waypointRing,
+        type: "circle",
+        source: WAYPOINTS_SOURCE_ID,
+        paint: {
+          "circle-radius": WAYPOINT_RING_RADIUS,
+          "circle-color": colors.background,
+          "circle-opacity": 0.9,
+          "circle-stroke-width": WAYPOINT_RING_WIDTH,
+          "circle-stroke-color": colors.primary,
+        },
+      });
+      map.addLayer({
+        id: LAYER_IDS.waypointLabel,
+        type: "symbol",
+        source: WAYPOINTS_SOURCE_ID,
+        layout: {
+          "text-field": ["get", "label"],
+          "text-font": STATION_LABEL_FONT,
+          "text-size": 12,
+          "text-anchor": "top",
+          "text-offset": WAYPOINT_LABEL_OFFSET,
+          "text-allow-overlap": true,
+        },
+        paint: {
+          "text-color": colors.primary,
+          "text-halo-color": colors.background,
+          "text-halo-width": 1.5,
+        },
+      });
       map.addLayer({
         id: LAYER_IDS.positionHalo,
         type: "circle",
@@ -155,6 +204,13 @@ export function TrackMap(props: TrackMapProps) {
     if (src && "setData" in src)
       (src as maplibregl.GeoJSONSource).setData(stationsToGeoJSON(stations) as never);
   }, [stations]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    const src = map?.getSource(WAYPOINTS_SOURCE_ID);
+    if (src && "setData" in src)
+      (src as maplibregl.GeoJSONSource).setData(waypointsToGeoJSON(waypoints ?? []) as never);
+  }, [waypoints]);
 
   useEffect(() => {
     const map = mapRef.current;
