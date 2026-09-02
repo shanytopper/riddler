@@ -82,11 +82,12 @@ export async function listEditorTracks(db: Db): Promise<EditorTrack[]> {
 
 /** The draft content for a track — the saved draft, or a fresh copy of the published version. */
 export async function getDraft(db: Db, trackId: string): Promise<TrackContent> {
+  // Fit on read so every consumer (the editor, validate, publish) sees the derived map region.
   const draft = await draftRow(db, trackId);
-  if (draft) return draft.content;
+  if (draft) return fitLegBoundsToStations(draft.content);
   const published = await publishedContent(db, trackId);
   if (!published) throw notFound(`no track ${trackId}`);
-  return published;
+  return fitLegBoundsToStations(published);
 }
 
 /** Saves the draft after a schema check (invariant errors are allowed until publish). */
@@ -110,7 +111,7 @@ export async function saveDraft(db: Db, trackId: string, content: unknown): Prom
 
 /** Runs the full validator (schema + authoring invariants) over the current draft. */
 export async function validateDraft(db: Db, trackId: string): Promise<ValidationReport> {
-  const content = fitLegBoundsToStations(await getDraft(db, trackId));
+  const content = await getDraft(db, trackId);
   const report = validateDocument("content", content);
   return {
     ok: !hasErrors(report),
@@ -141,7 +142,7 @@ export async function publishDraft(
   )[0]?.data;
   if (!tenant) throw notFound(`no venue for track ${trackId}`);
 
-  const content = fitLegBoundsToStations(await getDraft(db, trackId));
+  const content = await getDraft(db, trackId);
   const report = validateDocument("content", content);
   if (hasErrors(report))
     throw badRequest(
