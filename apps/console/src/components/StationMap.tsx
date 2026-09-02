@@ -147,6 +147,35 @@ export function StationMap({ number, location, context, onMove }: Props) {
     map.current?.setStyle(consoleStyle(next));
   };
 
+  // Drop the pin where the operator is standing — the natural way to mark a station on site.
+  const [locating, setLocating] = useState(false);
+  const [locateError, setLocateError] = useState<string | null>(null);
+  const useMyLocation = () => {
+    if (!("geolocation" in navigator)) {
+      setLocateError("Location isn't available in this browser.");
+      return;
+    }
+    setLocating(true);
+    setLocateError(null);
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setLocating(false);
+        const { latitude: lat, longitude: lng } = position.coords;
+        moveRef.current(lat, lng);
+        map.current?.easeTo({ center: [lng, lat], zoom: 16, duration: 400 });
+      },
+      (error) => {
+        setLocating(false);
+        setLocateError(
+          error.code === error.PERMISSION_DENIED
+            ? "Location permission was denied — allow it in the browser to use this."
+            : "Couldn't get your location. Try again outdoors or with location services on.",
+        );
+      },
+      { enableHighAccuracy: true, timeout: 10000 },
+    );
+  };
+
   return (
     <div style={{ position: "relative" }}>
       <div
@@ -169,7 +198,15 @@ export function StationMap({ number, location, context, onMove }: Props) {
             {basemapLabel(b)}
           </button>
         ))}
+        <button type="button" className="small" onClick={useMyLocation} disabled={locating}>
+          {locating ? "Locating…" : "Use my location"}
+        </button>
       </div>
+      {locateError ? (
+        <p className="small" style={{ margin: "6px 0 0", color: "var(--danger, #b00020)" }}>
+          {locateError}
+        </p>
+      ) : null}
     </div>
   );
 }

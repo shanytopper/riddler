@@ -32,6 +32,35 @@ export interface ValidationReport {
   warnings: Issue[];
 }
 
+/** The grid (~1 km) the map region snaps to, so a small pin move rarely re-cuts the tile extract. */
+const BOUNDS_GRID = 0.01;
+/** The minimum margin (~500 m) around the stations, so the map shows their surroundings. */
+const BOUNDS_MARGIN = 0.005;
+const round5 = (v: number): number => Math.round(v * 1e5) / 1e5;
+
+/**
+ * Sizes each tiles leg's map region to its stations: their bounding box, padded, snapped outward to a
+ * coarse grid. Bounds are derived from where the stations are, never hand-set, so a track can be
+ * anywhere in the world and always passes the "station inside the map" rule; snapping keeps the
+ * region — and so the cached tile extract — stable across small pin adjustments.
+ */
+export function fitLegBoundsToStations(content: TrackContent): TrackContent {
+  for (const leg of content.legs) {
+    if (leg.map.kind !== "tiles") continue;
+    const points = leg.stations.flatMap((s) => (s.location ? [s.location] : []));
+    if (points.length === 0) continue;
+    const down = (v: number) => Math.floor((v - BOUNDS_MARGIN) / BOUNDS_GRID) * BOUNDS_GRID;
+    const up = (v: number) => Math.ceil((v + BOUNDS_MARGIN) / BOUNDS_GRID) * BOUNDS_GRID;
+    leg.map.bounds = [
+      round5(down(Math.min(...points.map((p) => p.lng)))),
+      round5(down(Math.min(...points.map((p) => p.lat)))),
+      round5(up(Math.max(...points.map((p) => p.lng)))),
+      round5(up(Math.max(...points.map((p) => p.lat)))),
+    ];
+  }
+  return content;
+}
+
 /** Every track the console can edit, newest published first. */
 export async function listEditorTracks(db: Db): Promise<EditorTrack[]> {
   const rows = await db.select().from(tracks);
@@ -69,6 +98,7 @@ export async function saveDraft(db: Db, trackId: string, content: unknown): Prom
     throw badRequest(`draft does not match the schema: ${report.schema[0]?.message ?? "invalid"}`);
   const doc = content as TrackContent;
   if (doc.trackId !== trackId) throw badRequest("draft trackId does not match the track");
+  fitLegBoundsToStations(doc);
   await db
     .insert(trackDrafts)
     .values({ trackId, content: doc, updatedAt: new Date() })
@@ -80,7 +110,7 @@ export async function saveDraft(db: Db, trackId: string, content: unknown): Prom
 
 /** Runs the full validator (schema + authoring invariants) over the current draft. */
 export async function validateDraft(db: Db, trackId: string): Promise<ValidationReport> {
-  const content = await getDraft(db, trackId);
+  const content = fitLegBoundsToStations(await getDraft(db, trackId));
   const report = validateDocument("content", content);
   return {
     ok: !hasErrors(report),
@@ -111,7 +141,7 @@ export async function publishDraft(
   )[0]?.data;
   if (!tenant) throw notFound(`no venue for track ${trackId}`);
 
-  const content = await getDraft(db, trackId);
+  const content = fitLegBoundsToStations(await getDraft(db, trackId));
   const report = validateDocument("content", content);
   if (hasErrors(report))
     throw badRequest(
@@ -298,6 +328,7 @@ export async function createTrack(
     media: [],
     legs: [{ id: randomUUID(), map, stations: [seedStation(center)] }],
   };
+  fitLegBoundsToStations(content);
 
   const report = validateDocument("content", content);
   if (report.schema.length > 0)

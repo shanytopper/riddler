@@ -365,6 +365,52 @@ test("a long multi-word track name yields a schema-valid slug (no trailing hyphe
   assert.match(created.json().slug, /^[a-z0-9]+(-[a-z0-9]+)*$/);
 });
 
+test("the map region follows the stations, so a track can be placed anywhere", async () => {
+  const { app } = await harness();
+  const cookie = await login(app);
+  const { trackId } = (
+    await app.inject({
+      method: "POST",
+      url: "/console-api/tracks",
+      headers: { cookie },
+      payload: { name: "Far Away" },
+    })
+  ).json();
+
+  // Move the only station far from the seed venue (Haifa), well outside the copied bounds.
+  const draft = (
+    await app.inject({ url: `/console-api/tracks/${trackId}`, headers: { cookie } })
+  ).json().content as TrackContent;
+  draft.legs[0]!.stations[0]!.location = { lat: 32.794, lng: 34.99 };
+  const put = await app.inject({
+    method: "PUT",
+    url: `/console-api/tracks/${trackId}`,
+    headers: { cookie },
+    payload: { content: draft },
+  });
+  assert.equal(put.statusCode, 200);
+
+  // The saved region was refit around the moved station and the track still validates.
+  const saved = (
+    await app.inject({ url: `/console-api/tracks/${trackId}`, headers: { cookie } })
+  ).json().content as TrackContent;
+  const [west, south, east, north] = (saved.legs[0]!.map as { bounds: number[] }).bounds as [
+    number,
+    number,
+    number,
+    number,
+  ];
+  assert.ok(west < 34.99 && 34.99 < east && south < 32.794 && 32.794 < north);
+  const report = (
+    await app.inject({
+      method: "POST",
+      url: `/console-api/tracks/${trackId}/validate`,
+      headers: { cookie },
+    })
+  ).json();
+  assert.equal(report.ok, true); // no "outside the leg's map bounds" error
+});
+
 test("badRequest carries a 400 (sanity for the shared error helper)", () => {
   assert.equal(badRequest("x").status, 400);
 });

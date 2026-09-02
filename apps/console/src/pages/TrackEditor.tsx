@@ -191,14 +191,24 @@ export function TrackEditor() {
               onClick={() =>
                 patch((next) => {
                   const leg = next.legs[0];
-                  if (leg) (leg.stations as Station[]).push(blankStation(legCenter(next)));
+                  if (!leg) return;
+                  // Start the new station a short walk (~35 m) from the previous one, so a track
+                  // grows from where the operator is working, not from a fixed default.
+                  const last = (
+                    leg.stations[leg.stations.length - 1] as unknown as EditStation | undefined
+                  )?.location;
+                  const start = last
+                    ? { lat: last.lat + 0.0003, lng: last.lng + 0.0003 }
+                    : legCenter(next);
+                  (leg.stations as Station[]).push(blankStation(start));
                 })
               }
             >
               Add station
             </button>
             <span className="muted small">
-              A new station starts at the map centre — open it and drag its pin.
+              A new station starts next to the previous one — open it and drag its pin, or use your
+              location.
             </span>
           </div>
         </div>
